@@ -1,257 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Be My Valentine 💖</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Be My Valentine 💖</title>
 
-<style>
-  body{
-    margin:0;
-    min-height:100vh;
-    background: linear-gradient(135deg, #ffd1dc, #ffe6eb);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family: Arial, sans-serif;
-    overflow:hidden;
-  }
+  <style>
+    body{
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(135deg, #ffd1dc, #ffe6eb);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-family: Arial, sans-serif;
+    }
 
-  .card{
-    background:#fff;
-    padding:40px 22px;
-    border-radius:22px;
-    width:min(860px, 92vw);
-    text-align:center;
-    box-shadow:0 15px 30px rgba(0,0,0,0.15);
-  }
+    .card{
+      background:#fff;
+      padding:40px 22px;
+      border-radius:22px;
+      width:min(860px, 92vw);
+      text-align:center;
+      box-shadow:0 15px 30px rgba(0,0,0,0.15);
+    }
 
-  .catWrap{ display:flex; justify-content:center; margin-bottom:10px; }
-  .catSvg{ width:80px; height:80px; }
+    .catWrap{ display:flex; justify-content:center; margin-bottom:10px; }
+    .catSvg{ width:80px; height:80px; }
 
-  h1{
-    margin: 14px 0 10px;
-    font-weight: 800;
-    font-size: clamp(24px, 7vw, 36px);
-    line-height: 1.15;
-    white-space: normal;
-  }
+    h1{
+      margin: 14px 0 10px;
+      font-weight: 800;
+      font-size: clamp(24px, 7vw, 36px);
+      line-height: 1.15;
+      white-space: normal;
+    }
 
-  .screen{ display:none; }
-  .screen.active{ display:block; }
+    .screen{ display:none; }
+    .screen.active{ display:block; }
 
-  .arena{
-    margin-top: 26px;
-    position: relative;
-    height: 320px;
-    width: 100%;
-  }
+    .arena{
+      margin-top: 26px;
+      position: relative;
+      height: 320px;
+      width: 100%;
+    }
 
-  .btn{
-    padding: 14px 34px;
-    font-size: 18px;
-    border-radius: 12px;
-    cursor: pointer;
-    position: absolute;
-    user-select:none;
-    -webkit-tap-highlight-color: transparent;
-    border: 0;
-    font-family: inherit;
+    /* Simple, tappable buttons */
+    .btn{
+      position:absolute;
+      padding: 14px 34px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
 
-    /* iOS / pointer behavior */
-    touch-action: manipulation;
-  }
+      /* iOS tap friendliness */
+      touch-action: manipulation;
+    }
 
-  .yes{
-    background:#ff4d6d;
-    color:#fff;
-    left:50%;
-    top:110px;
-    transform: translateX(-165%);
-    z-index: 2;
-    transition: transform 160ms ease;
-  }
-  .yes:hover{
-    transform: translateX(-165%) scale(1.12);
-  }
+    #yesBtn{
+      background:#ff4d6d;
+      color:#fff;
+      left:50%;
+      top:110px;
+      transform: translateX(-165%);
+      transition: transform 160ms ease;
+    }
+    #yesBtn:hover{
+      transform: translateX(-165%) scale(1.12);
+    }
 
-  .no{
-    background:#ddd;
-    color:#111;
-    z-index: 3; /* keep it tappable */
-    transition: transform 170ms ease-out;
-    will-change: transform;
-  }
+    #noBtn{
+      background:#ddd;
+      color:#111;
+      left: 0px; /* JS will set */
+      top: 0px;  /* JS will set */
+    }
 
-  .shy{
-    margin-top: 52px;
-    font-size: 14px;
-    color: #666;
-  }
+    .shy{
+      margin-top: 52px;
+      font-size: 14px;
+      color: #666;
+    }
 
-  .yay{
-    margin: 10px 0 12px;
-    font-size: 32px;
-    font-weight: 800;
-  }
+    .yay{
+      margin: 10px 0 12px;
+      font-size: 32px;
+      font-weight: 800;
+    }
 
-  img{
-    width:100%;
-    max-width:420px;
-    border-radius:14px;
-  }
-</style>
+    img{
+      width:100%;
+      max-width:420px;
+      border-radius:14px;
+    }
+  </style>
 </head>
 
 <body>
-
-<div class="card">
-  <div class="catWrap" aria-hidden="true">
-    <svg class="catSvg" viewBox="0 0 120 120">
-      <circle cx="60" cy="64" r="40" fill="#F2B37B"/>
-      <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
-      <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
-      <path d="M88 22 C88 16,96 14,100 20 C104 14,112 16,112 22
-               C112 32,100 38,100 38 C100 38,88 32,88 22Z" fill="#FF4D6D"/>
-      <circle cx="48" cy="62" r="4" fill="#222"/>
-      <circle cx="72" cy="62" r="4" fill="#222"/>
-      <path d="M60 70 C56 70,54 75,60 78 C66 75,64 70,60 70Z" fill="#FF6B8A"/>
-    </svg>
-  </div>
-
-  <!-- QUESTION -->
-  <div id="questionScreen" class="screen active">
-    <h1>Becca, will you be my Valentine?</h1>
-
-    <div class="arena" id="arena">
-      <button class="btn yes" id="yesBtn" type="button">Yes</button>
-      <button class="btn no" id="noBtn" type="button">No</button>
+  <div class="card">
+    <div class="catWrap" aria-hidden="true">
+      <svg class="catSvg" viewBox="0 0 120 120">
+        <circle cx="60" cy="64" r="40" fill="#F2B37B"/>
+        <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
+        <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
+        <path d="M88 22 C88 16,96 14,100 20 C104 14,112 16,112 22
+                 C112 32,100 38,100 38 C100 38,88 32,88 22Z" fill="#FF4D6D"/>
+        <circle cx="48" cy="62" r="4" fill="#222"/>
+        <circle cx="72" cy="62" r="4" fill="#222"/>
+        <path d="M60 70 C56 70,54 75,60 78 C66 75,64 70,60 70Z" fill="#FF6B8A"/>
+      </svg>
     </div>
 
-    <div class="shy">"No" seems a bit shy 😈</div>
+    <!-- QUESTION -->
+    <div id="questionScreen" class="screen active">
+      <h1>Becca, will you be my Valentine?</h1>
+
+      <div class="arena" id="arena">
+        <button class="btn" id="yesBtn" type="button">Yes</button>
+        <button class="btn" id="noBtn" type="button">No</button>
+      </div>
+
+      <div class="shy">"No" seems a bit shy 😈</div>
+    </div>
+
+    <!-- YES -->
+    <div id="yesScreen" class="screen">
+      <h1>Becca, will you be my Valentine?</h1>
+      <div class="yay">YAY!!! 🎉</div>
+      <img alt="Kip says yes" src="kip.gif">
+    </div>
   </div>
 
-  <!-- YES -->
-  <div id="yesScreen" class="screen">
-    <h1>Becca, will you be my Valentine?</h1>
-    <div class="yay">YAY!!! 🎉</div>
-    <img alt="Kip says yes" src="kip.gif" />
-  </div>
-</div>
+  <script>
+    (function(){
+      const arena = document.getElementById("arena");
+      const yesBtn = document.getElementById("yesBtn");
+      const noBtn  = document.getElementById("noBtn");
+      const qScreen = document.getElementById("questionScreen");
+      const yScreen = document.getElementById("yesScreen");
 
-<script>
-(() => {
-  const arena = document.getElementById("arena");
-  const yesBtn = document.getElementById("yesBtn");
-  const noBtn  = document.getElementById("noBtn");
-  const qScreen = document.getElementById("questionScreen");
-  const yScreen = document.getElementById("yesScreen");
-  if(!arena || !yesBtn || !noBtn || !qScreen || !yScreen) return;
+      if(!arena || !yesBtn || !noBtn || !qScreen || !yScreen) return;
 
-  // --- screen toggle ---
-  yesBtn.addEventListener("click", () => {
-    qScreen.classList.remove("active");
-    yScreen.classList.add("active");
-  });
+      // YES -> show success screen
+      yesBtn.addEventListener("click", () => {
+        qScreen.classList.remove("active");
+        yScreen.classList.add("active");
+      });
 
-  // --- movement tuning (viral feel) ---
-  const pad = 12;
-  const triggerRadius = 95; // desktop proximity
-  const jumpMin = 150;
-  const jumpMax = 235;
+      const pad = 12;
 
-  // Keep NO roughly on the right half so it starts like the viral video
-  const keepRightBias = 0.58;
+      function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 
-  let x = 0, y = 0;
+      function placeNo(x, y){
+        const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+        const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
 
-  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+        // Keep NO on right half so it doesn’t drift onto YES
+        const minX = Math.max(pad, Math.floor(arena.clientWidth * 0.55));
 
-  function place(nx, ny){
-    const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
-    const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+        noBtn.style.left = clamp(x, minX, maxX) + "px";
+        noBtn.style.top  = clamp(y, pad,  maxY) + "px";
+      }
 
-    // bias: don't let it live too far left (prevents overlap-ish frustration)
-    const minX = Math.max(pad, arena.clientWidth * keepRightBias);
+      function randomJump(){
+        const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+        const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+        const minX = Math.max(pad, Math.floor(arena.clientWidth * 0.55));
 
-    x = clamp(nx, minX, maxX);
-    y = clamp(ny, pad, maxY);
+        const x = minX + Math.random() * Math.max(1, (maxX - minX));
+        const y = pad  + Math.random() * Math.max(1, (maxY - pad));
 
-    noBtn.style.transform = translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);
-  }
+        placeNo(x, y);
+      }
 
-  function arenaLocal(clientX, clientY){
-    const r = arena.getBoundingClientRect();
-    return { px: clientX - r.left, py: clientY - r.top };
-  }
+      function init(){
+        // Start level with YES (viral look)
+        const ar = arena.getBoundingClientRect();
+        const yr = yesBtn.getBoundingClientRect();
+        const startY = (yr.top - ar.top);
+        const startX = (yr.right - ar.left) + 80;
+        placeNo(startX, startY);
+      }
 
-  function center(){
-    return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
-  }
+      // Make NO dodge:
+      // Desktop: when you hover near it (mouseover)
+      // Mobile: when you try to tap it (touchstart)
+      noBtn.addEventListener("mouseover", () => randomJump());
+      noBtn.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        randomJump();
+      }, { passive:false });
 
-  function bigJump(awayFrom){
-    // awayFrom is optional {px, py} in arena coords
-    let dx = (Math.random()*2 - 1);
-    let dy = (Math.random()*2 - 1);
+      // Optional: also dodge on click attempt (desktop)
+      noBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        randomJump();
+      });
 
-    if(awayFrom){
-      const c = center();
-      let ax = c.cx - awayFrom.px;
-      let ay = c.cy - awayFrom.py;
-      const d = Math.hypot(ax, ay) || 1;
-      ax /= d; ay /= d;
-
-      // strong bias away, but still random
-      dx = dx * 0.25 + ax * 0.75;
-      dy = dy * 0.25 + ay * 0.75;
-    }
-
-    const d2 = Math.hypot(dx, dy) || 1;
-    dx /= d2; dy /= d2;
-
-    const jump = jumpMin + Math.random() * (jumpMax - jumpMin);
-
-    // extra randomness so it doesn't feel "side-to-side"
-    const rx = (Math.random()*70 - 35);
-    const ry = (Math.random()*70 - 35);
-
-    place(x + dx*jump + rx, y + dy*jump + ry);
-  }
-
-  // Start: level with YES, to the right (viral look)
-  function init(){
-    const ar = arena.getBoundingClientRect();
-    const yr = yesBtn.getBoundingClientRect();
-    const startY = (yr.top - ar.top);
-    const startX = (yr.right - ar.left) + 80;
-    place(startX, startY);
-  }
-
-  requestAnimationFrame(init);
-  window.addEventListener("resize", () => requestAnimationFrame(init));
-
-  // Desktop: jump when cursor gets close
-  arena.addEventListener("pointermove", (e) => {
-    // Only do proximity running for mouse/trackpad
-    if(e.pointerType !== "mouse") return;
-
-    const p = arenaLocal(e.clientX, e.clientY);
-    const c = center();
-    const dist = Math.hypot(c.cx - p.px, c.cy - p.py);
-    if(dist <= triggerRadius){
-      bigJump(p);
-    }
-  });
-
-  // Mobile: jump when you try to tap NO (this is the “viral” behavior)
-  noBtn.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const p = arenaLocal(e.clientX, e.clientY);
-    bigJump(p);
-  });
-})();
-</script>
-
+      // Init after layout
+      requestAnimationFrame(init);
+      window.addEventListener("resize", () => requestAnimationFrame(init));
+    })();
+  </script>
 </body>
 </html>
