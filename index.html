@@ -29,18 +29,15 @@
   .catWrap{ display:flex; justify-content:center; margin-bottom:10px; }
   .catSvg{ width:80px; height:80px; }
 
-  /* Force wrapping on mobile */
   h1{
     margin: 14px 0 10px;
     font-weight: 800;
     font-size: clamp(24px, 7vw, 36px);
     line-height: 1.15;
     white-space: normal;
-    overflow: visible;
-    text-overflow: unset;
   }
 
-  /* YES screen via :target */
+  /* YES screen toggle */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
@@ -60,7 +57,6 @@
     border-radius: 12px;
     cursor: pointer;
     position: absolute;
-    text-decoration:none;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -69,17 +65,15 @@
     background:#ff4d6d;
     color:#fff;
     left:50%;
-    top: 110px;
+    top:110px;
     transform: translateX(-165%);
+    z-index: 2; /* ALWAYS above No */
   }
 
-  /* IMPORTANT: default NO position is NOT at (0,0),
-     so even if JS fails it won't block the YES button */
   .no{
     background:#ddd;
     color:#111;
-    left: 0;
-    top: 0;
+    z-index: 1;
     transform: translate(220px, 110px);
     transition: transform 160ms ease-out;
     will-change: transform;
@@ -124,7 +118,7 @@
     </svg>
   </div>
 
-  <!-- QUESTION -->
+  <!-- QUESTION SCREEN -->
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
@@ -136,12 +130,12 @@
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
-  <!-- YES -->
+  <!-- YES SCREEN -->
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
 
-    <!-- LOCAL GIF (UPLOAD kip.gif into your repo) -->
+    <!-- LOCAL GIF -->
     <img alt="Kip says yes" src="kip.gif" />
   </div>
 </div>
@@ -153,11 +147,10 @@
   if(!arena || !noBtn) return;
 
   var pad = 12;
-  var triggerRadius = 90;  // desktop proximity
+  var triggerRadius = 90;
   var jumpMin = 120;
   var jumpMax = 170;
 
-  // Position inside arena (top-left)
   var x = 220;
   var y = 110;
 
@@ -185,7 +178,6 @@
     if(d < 1){ dx = 1; dy = 1; d = 1; }
     dx /= d; dy /= d;
 
-    // small angle jitter
     var ang = (Math.random() * 0.9 - 0.45);
     var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
     var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
@@ -199,34 +191,24 @@
     return { px: clientX - r.left, py: clientY - r.top };
   }
 
-  // Initial clamp
   place(x, y);
 
-  // Desktop: move only when cursor gets close
   arena.addEventListener("mousemove", function(e){
     var p = arenaLocal(e.clientX, e.clientY);
     dodgeFrom(p.px, p.py);
   });
 
-  // Mobile: dodge only when you try to tap the NO button
   noBtn.addEventListener("touchstart", function(e){
-    var t = e.touches && e.touches[0];
-    if(!t) return;
-    var p = arenaLocal(t.clientX, t.clientY);
-
-    // force a dodge on tap attempt
-    var saved = triggerRadius;
-    triggerRadius = 9999;
-    dodgeFrom(p.px, p.py);
-    triggerRadius = saved;
+    var t = e.touches[0];
+    var r = arena.getBoundingClientRect();
+    dodgeFrom(t.clientX - r.left, t.clientY - r.top);
   }, {passive:true});
 
-  // Prevent “No” click from doing anything
   noBtn.addEventListener("click", function(e){
     e.preventDefault();
+    e.stopPropagation(); // stop click-through to YES
   });
 
-  // Re-clamp on resize/orientation changes
   window.addEventListener("resize", function(){
     place(x, y);
   });
