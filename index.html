@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>💖 A Question For You 💖</title>
+
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #ffd1dc, #ffe6eb);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Arial", sans-serif;
+  }
+
+  .card {
+    background: #fff;
+    padding: 40px;
+    border-radius: 20px;
+    width: 420px;
+    text-align: center;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    position: relative;
+  }
+
+  h1 {
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  .cat {
+    font-size: 60px;
+    margin-bottom: 10px;
+  }
+
+  .buttons {
+    margin-top: 25px;
+    position: relative;
+    height: 80px;
+  }
+
+  button {
+    padding: 12px 25px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: absolute;
+  }
+
+  #yes {
+    background: #ff4d6d;
+    color: white;
+    left: 90px;
+  }
+
+  #yes:hover {
+    transform: scale(1.2);
+  }
+
+  #no {
+    background: #ddd;
+    right: 90px;
+  }
+
+  .shy {
+    margin-top: 50px;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: 12px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="card" id="card">
+  <div class="cat">🐱💖</div>
+  <h1>Becca, will you be my Valentine?</h1>
+
+  <div class="buttons">
+    <button id="yes" onclick="yesClick()">Yes</button>
+    <button id="no">No</button>
+  </div>
+
+  <div class="shy">"No" seems a bit shy 😈</div>
+</div>
+
+<script>
+  const noBtn = document.getElementById("no");
+
+  noBtn.addEventListener("mouseenter", () => {
+    const x = Math.random() * 250 - 125;
+    const y = Math.random() * 80 - 40;
+    noBtn.style.transform = translate(${x}px, ${y}px);
+  });
+
+  function yesClick() {
+    document.getElementById("card").innerHTML = `
+      <div class="cat">🐱🎉</div>
+      <h1>YAY!!! 🎉</h1>
+      <p>You just made my day 💕</p>
+      <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif">
+    `;
+  }
+</script>
+
+</body>
+</html>
