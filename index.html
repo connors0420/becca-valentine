@@ -8,60 +8,45 @@
 <style>
   body{
     margin:0;
-    height:100vh;
+    min-height:100vh;
     background: linear-gradient(135deg, #ffd1dc, #ffe6eb);
     display:flex;
     align-items:center;
     justify-content:center;
     font-family: Arial, sans-serif;
-    overflow:hidden;
   }
 
   .card{
     background:#fff;
-    padding:48px 72px;
+    padding:40px 22px;
     border-radius:22px;
-    width:min(860px, 94vw);
+    width:92vw;
+    max-width:860px;
     text-align:center;
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
 
-  @media (max-width: 520px){
-    .card{ padding:34px 18px; width:92vw; }
-  }
-
   .catWrap{ display:flex; justify-content:center; margin-bottom:10px; }
-  .catSvg{ width:92px; height:92px; }
-  @media (max-width: 520px){
-    .catSvg{ width:78px; height:78px; }
-  }
+  .catSvg{ width:80px; height:80px; }
 
-  /* FORCE WRAPPING ON MOBILE */
   h1{
     margin: 14px 0 10px;
     font-weight: 800;
     font-size: clamp(24px, 7vw, 36px);
     line-height: 1.15;
-    white-space: normal;      /* wrap */
-    overflow: visible;        /* no clipping */
-    text-overflow: unset;     /* no ellipsis */
-    word-break: normal;
+    white-space: normal;
   }
 
-  /* YES screen via :target (no JS needed) */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
   #yesScreen{ display:none; }
 
   .arena{
-    margin-top: 28px;
+    margin-top: 26px;
     position: relative;
-    height: 360px;
+    height: 300px;
     width: 100%;
-  }
-  @media (max-width: 520px){
-    .arena{ height: 320px; }
   }
 
   .btn{
@@ -71,7 +56,6 @@
     border-radius: 12px;
     cursor: pointer;
     position: absolute;
-    text-decoration:none;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -80,48 +64,34 @@
     background:#ff4d6d;
     color:#fff;
     left:50%;
-    top: 140px;
+    top: 110px;
     transform: translateX(-165%);
-    transition: transform 0.18s ease;
-  }
-  .yes:hover{
-    transform: translateX(-165%) scale(1.2);
   }
 
-  /* NO is positioned entirely by JS so it can NEVER leave the arena */
   .no{
     background:#ddd;
     color:#111;
     left:0;
     top:0;
-    will-change: transform;
-    transform: translate3d(0px, 0px, 0);
-    transition: transform 160ms ease-out; /* smooth dodge */
+    transition: transform 160ms ease-out;
   }
 
   .shy{
-    margin-top: 62px;
+    margin-top: 52px;
     font-size: 14px;
     color: #666;
   }
 
   .yay{
-    margin: 10px 0 0;
-    font-size: 34px;
+    margin: 10px 0 12px;
+    font-size: 32px;
     font-weight: 800;
-    animation: yayBounce 0.8s ease;
-  }
-  @keyframes yayBounce{
-    0%{ transform: scale(0.7); opacity: 0.2; }
-    45%{ transform: scale(1.2); opacity: 1; }
-    70%{ transform: scale(0.95); }
-    100%{ transform: scale(1); }
   }
 
   img{
-    max-width:100%;
+    width:100%;
+    max-width:420px;
     border-radius:14px;
-    margin-top:22px;
   }
 </style>
 </head>
@@ -131,26 +101,21 @@
 <a id="yes"></a>
 
 <div class="card">
-  <div class="catWrap" aria-hidden="true">
-    <!-- Cat icon -->
+  <div class="catWrap">
     <svg class="catSvg" viewBox="0 0 120 120">
-      <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
-      <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
-      <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"></path>
-      <path d="M88 22
-               C88 16, 96 14, 100 20
-               C104 14, 112 16, 112 22
-               C112 32, 100 38, 100 38
-               C100 38, 88 32, 88 22Z"
-            fill="#FF4D6D"></path>
-      <circle cx="48" cy="62" r="4.2" fill="#222"></circle>
-      <circle cx="72" cy="62" r="4.2" fill="#222"></circle>
-      <path d="M60 70 C56 70, 54 75, 60 78 C66 75, 64 70, 60 70Z" fill="#FF6B8A"></path>
-      <path d="M56 80 C58 82, 62 82, 64 80" stroke="#444" stroke-width="3" stroke-linecap="round" fill="none"></path>
+      <circle cx="60" cy="64" r="40" fill="#F2B37B"/>
+      <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
+      <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
+      <path d="M88 22 C88 16,96 14,100 20 C104 14,112 16,112 22
+               C112 32,100 38,100 38 C100 38,88 32,88 22Z"
+            fill="#FF4D6D"/>
+      <circle cx="48" cy="62" r="4" fill="#222"/>
+      <circle cx="72" cy="62" r="4" fill="#222"/>
+      <path d="M60 70 C56 70,54 75,60 78 C66 75,64 70,60 70Z" fill="#FF6B8A"/>
     </svg>
   </div>
 
-  <!-- QUESTION SCREEN -->
+  <!-- QUESTION -->
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
@@ -162,113 +127,68 @@
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
-  <!-- YES SCREEN -->
+  <!-- YES -->
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
-    <img alt="kip says yes" src="https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif" />
+
+    <!-- WORKING KIP GIF (Tenor – hotlink safe) -->
+    <img
+      alt="Kip says yes"
+      src="https://media.tenor.com/1G1zY1qXcXAAAAAC/kip-napoleon-dynamite-yes.gif"
+    />
   </div>
 </div>
 
 <script>
 (function(){
-  var arena = document.getElementById("arena");
-  var noBtn = document.getElementById("noBtn");
+  const arena = document.getElementById("arena");
+  const noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // Viral-ish tuning
-  var triggerRadius = 95;   // desktop: how close before it dodges
-  var jumpMin = 120;
-  var jumpMax = 170;
-  var pad = 12;
+  const pad = 12;
+  const jumpMin = 120;
+  const jumpMax = 170;
 
-  // Current NO position inside arena (top-left of button)
-  var x = 0, y = 0;
+  let x = arena.clientWidth * 0.62;
+  let y = 110;
 
-  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
-
-  function bounds(){
-    return {
-      maxX: arena.clientWidth  - noBtn.offsetWidth  - pad,
-      maxY: arena.clientHeight - noBtn.offsetHeight - pad
-    };
-  }
+  function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
 
   function place(nx, ny){
-    var b = bounds();
-    x = clamp(nx, pad, b.maxX);
-    y = clamp(ny, pad, b.maxY);
-    noBtn.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+    const maxX = arena.clientWidth - noBtn.offsetWidth - pad;
+    const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+    x = clamp(nx, pad, maxX);
+    y = clamp(ny, pad, maxY);
+    noBtn.style.transform = translate(${x}px, ${y}px);
   }
 
-  // start position (right side like the video)
-  place(arena.clientWidth * 0.62, 140);
+  place(x,y);
 
-  function arenaLocal(clientX, clientY){
-    var r = arena.getBoundingClientRect();
-    return { px: clientX - r.left, py: clientY - r.top };
+  function dodge(px,py){
+    const cx = x + noBtn.offsetWidth/2;
+    const cy = y + noBtn.offsetHeight/2;
+    let dx = cx - px;
+    let dy = cy - py;
+    let d = Math.hypot(dx,dy);
+    if(d < 1){ dx=1; dy=1; d=1; }
+    dx/=d; dy/=d;
+
+    const jump = jumpMin + Math.random()*(jumpMax-jumpMin);
+    place(x + dx*jump, y + dy*jump);
   }
 
-  function center(){
-    return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
-  }
-
-  function dodgeFrom(px, py, forceDodge){
-    var c = center();
-    var dx = c.cx - px;
-    var dy = c.cy - py;
-    var d = Math.sqrt(dx*dx + dy*dy);
-
-    if(!forceDodge && d > triggerRadius) return;
-
-    if(d < 0.001){ dx = 1; dy = 1; d = 1; }
-    dx /= d; dy /= d;
-
-    // small random angle jitter to feel natural
-    var ang = (Math.random() * 0.9 - 0.45);
-    var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
-    var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
-
-    var jump = jumpMin + Math.random() * (jumpMax - jumpMin);
-
-    var nx = x + jx * jump;
-    var ny = y + jy * jump;
-
-    // If near edges, push inward a bit so it doesn't disappear
-    var b = bounds();
-    var edge = 18;
-
-    if(nx < edge) nx += 110;
-    if(nx > b.maxX - edge) nx -= 110;
-    if(ny < edge) ny += 80;
-    if(ny > b.maxY - edge) ny -= 80;
-
-    place(nx, ny);
-  }
-
-  // Desktop: dodge when cursor gets close
-  arena.addEventListener("mousemove", function(e){
-    var p = arenaLocal(e.clientX, e.clientY);
-    dodgeFrom(p.px, p.py, false);
+  arena.addEventListener("mousemove", e=>{
+    const r = arena.getBoundingClientRect();
+    dodge(e.clientX - r.left, e.clientY - r.top);
   });
 
-  // Mobile: dodge only when you try to tap the NO button (viral feel)
-  noBtn.addEventListener("touchstart", function(e){
-    var t = e.touches && e.touches[0];
-    if(!t) return;
-    var p = arenaLocal(t.clientX, t.clientY);
-    dodgeFrom(p.px, p.py, true); // force dodge on tap attempt
+  noBtn.addEventListener("touchstart", e=>{
+    const t = e.touches[0];
+    const r = arena.getBoundingClientRect();
+    dodge(t.clientX - r.left, t.clientY - r.top);
   }, {passive:true});
 
-  // Prevent “No” doing anything
-  noBtn.addEventListener("click", function(e){
-    e.preventDefault();
-  });
-
-  // Re-clamp on resize/orientation changes
-  window.addEventListener("resize", function(){
-    place(x, y);
-  });
 })();
 </script>
 
