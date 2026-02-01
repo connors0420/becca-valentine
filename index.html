@@ -59,6 +59,7 @@
     position: absolute;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
+    text-decoration: none;
   }
 
   .yes{
@@ -67,7 +68,7 @@
     left:50%;
     top:110px;
     transform: translateX(-165%);
-    z-index: 2; /* ALWAYS above No */
+    z-index: 2;
   }
 
   .no{
@@ -124,7 +125,8 @@
 
     <div class="arena" id="arena">
       <a class="btn yes" href="#yes">Yes</a>
-      <a class="btn no" id="noBtn" href="javascript:void(0)">No</a>
+      <!-- IMPORTANT: no more javascript: URL -->
+      <a class="btn no" id="noBtn" href="#">No</a>
     </div>
 
     <div class="shy">"No" seems a bit shy 😈</div>
@@ -135,7 +137,7 @@
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
 
-    <!-- LOCAL GIF -->
+    <!-- LOCAL GIF (make sure kip.gif is in the repo root) -->
     <img alt="Kip says yes" src="kip.gif" />
   </div>
 </div>
@@ -199,14 +201,18 @@
   });
 
   noBtn.addEventListener("touchstart", function(e){
+    // stop Safari from treating it like a real link tap
+    e.preventDefault();
+    e.stopPropagation();
+
     var t = e.touches[0];
     var r = arena.getBoundingClientRect();
     dodgeFrom(t.clientX - r.left, t.clientY - r.top);
-  }, {passive:true});
+  }, {passive:false});
 
   noBtn.addEventListener("click", function(e){
     e.preventDefault();
-    e.stopPropagation(); // stop click-through to YES
+    e.stopPropagation();
   });
 
   window.addEventListener("resize", function(){
