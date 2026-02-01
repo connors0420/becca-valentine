@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>💖 A Question For You 💖</title>
+<title>Be My Valentine 💖</title>
 
 <style>
   body {
@@ -24,43 +24,45 @@
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
   }
 
-  h1 {
-    margin-bottom: 20px;
-  }
-
   .cat {
     font-size: 60px;
+  }
+
+  h1 {
+    margin: 20px 0;
   }
 
   .buttons {
     margin-top: 30px;
     position: relative;
-    height: 100px;
+    height: 140px;
   }
 
   button {
-    padding: 12px 25px;
+    padding: 14px 30px;
     font-size: 18px;
     border-radius: 12px;
     border: none;
     cursor: pointer;
     position: absolute;
-    transition: transform 0.2s ease;
   }
 
   #yes {
     background: #ff4d6d;
     color: white;
-    left: 80px;
+    left: 50%;
+    transform: translateX(-140%);
+    transition: transform 0.2s ease;
   }
 
   #yes:hover {
-    transform: scale(1.25);
+    transform: translateX(-140%) scale(1.25);
   }
 
   #no {
     background: #ddd;
-    right: 80px;
+    left: 50%;
+    transform: translateX(20%);
   }
 
   .shy {
@@ -84,40 +86,40 @@
   <h1>Becca, will you be my Valentine?</h1>
 
   <div class="buttons">
-    <button id="yes">Yes</button>
-    <button id="no">No</button>
+    <button id="yes" onclick="yesClick()">Yes</button>
+    <button id="no"
+      onmouseover="moveNo()"
+      ontouchstart="moveNo()">
+      No
+    </button>
   </div>
 
   <div class="shy">"No" seems a bit shy 😈</div>
 </div>
 
 <script>
-  const noBtn = document.getElementById("no");
-  const yesBtn = document.getElementById("yes");
+  function moveNo() {
+    const noBtn = document.getElementById("no");
+    const parent = noBtn.parentElement;
 
-  function moveNoButton() {
-    const x = Math.random() * 240 - 120;
-    const y = Math.random() * 80 - 40;
-    noBtn.style.transform = translate(${x}px, ${y}px);
+    const maxX = parent.offsetWidth - noBtn.offsetWidth;
+    const maxY = parent.offsetHeight - noBtn.offsetHeight;
+
+    const x = Math.random() * maxX;
+    const y = Math.random() * maxY;
+
+    noBtn.style.left = x + "px";
+    noBtn.style.top = y + "px";
   }
 
-  // Desktop hover
-  noBtn.addEventListener("mouseenter", moveNoButton);
-
-  // Mobile tap
-  noBtn.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    moveNoButton();
-  });
-
-  yesBtn.addEventListener("click", () => {
+  function yesClick() {
     document.getElementById("card").innerHTML = `
       <div class="cat">🐱🎉</div>
       <h1>YAY!!! 🎉</h1>
       <p>You just made my day 💕</p>
       <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif">
     `;
-  });
+  }
 </script>
 
 </body>
