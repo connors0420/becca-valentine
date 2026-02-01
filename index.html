@@ -14,14 +14,14 @@
     align-items:center;
     justify-content:center;
     font-family: Arial, sans-serif;
+    overflow:hidden;
   }
 
   .card{
     background:#fff;
     padding:40px 22px;
     border-radius:22px;
-    width:92vw;
-    max-width:860px;
+    width:min(860px, 92vw);
     text-align:center;
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
@@ -59,7 +59,7 @@
     position: absolute;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
-    text-decoration: none;
+    text-decoration:none;
   }
 
   .yes{
@@ -68,20 +68,20 @@
     left:50%;
     top:110px;
     transform: translateX(-165%);
-    z-index: 1;
   }
 
-  /* Revert feel: NO floats freely and stays tappable */
+  .yes:hover{
+    transform: translateX(-165%) scale(1.12);
+    transition: transform 160ms ease;
+  }
+
+  /* fallback placement for NO if JS fails */
   .no{
     background:#ddd;
     color:#111;
-
-    /* safe default if JS fails */
     top:110px;
     right:28px;
     left:auto;
-
-    z-index: 5; /* NO above YES */
     transition: transform 160ms ease-out;
     will-change: transform;
   }
@@ -117,15 +117,14 @@
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
       <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
       <path d="M88 22 C88 16,96 14,100 20 C104 14,112 16,112 22
-               C112 32,100 38,100 38 C100 38,88 32,88 22Z"
-            fill="#FF4D6D"/>
+               C112 32,100 38,100 38 C100 38,88 32,88 22Z" fill="#FF4D6D"/>
       <circle cx="48" cy="62" r="4" fill="#222"/>
       <circle cx="72" cy="62" r="4" fill="#222"/>
       <path d="M60 70 C56 70,54 75,60 78 C66 75,64 70,60 70Z" fill="#FF6B8A"/>
     </svg>
   </div>
 
-  <!-- QUESTION SCREEN -->
+  <!-- QUESTION -->
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
@@ -137,7 +136,7 @@
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
-  <!-- YES SCREEN -->
+  <!-- YES -->
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
@@ -147,28 +146,82 @@
 
 <script>
 (function(){
-  var arena = document.getElementById("arena");
-  var noBtn = document.getElementById("noBtn");
-  var yesBtn = document.getElementById("yesBtn");
-  if(!arena || !noBtn || !yesBtn) return;
+  const arena = document.getElementById("arena");
+  const yesBtn = document.getElementById("yesBtn");
+  const noBtn  = document.getElementById("noBtn");
+  if(!arena || !yesBtn || !noBtn) return;
 
-  // tuning
-  var pad = 12;
-  var triggerRadius = 90;
-  var jumpMin = 120;
-  var jumpMax = 170;
+  const pad = 12;
+  const triggerRadius = 90;
+  const jumpMin = 110;
+  const jumpMax = 170;
 
-  // JS takeover positioning using transforms
-  var x = 0, y = 0;
+  // HARD RULE: NO can never overlap the YES rectangle (with margin)
+  const noFlyMargin = 32;
 
-  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+  let x = 0, y = 0;
+
+  const clamp = (n,min,max) => Math.max(min, Math.min(max, n));
+
+  function rects(){
+    const ar = arena.getBoundingClientRect();
+    const yr = yesBtn.getBoundingClientRect();
+    return { ar, yr };
+  }
+
+  function yesZone(){
+    const { ar, yr } = rects();
+    return {
+      left:   (yr.left  - ar.left) - noFlyMargin,
+      right:  (yr.right - ar.left) + noFlyMargin,
+      top:    (yr.top   - ar.top)  - noFlyMargin,
+      bottom: (yr.bottom- ar.top)  + noFlyMargin
+    };
+  }
+
+  function overlapsYes(nx, ny){
+    const z = yesZone();
+    const l = nx, t = ny;
+    const r = nx + noBtn.offsetWidth;
+    const b = ny + noBtn.offsetHeight;
+    return !(r < z.left || l > z.right || b < z.top || t > z.bottom);
+  }
+
+  function applyTransform(){
+    // Switch from right/top fallback to transform positioning
+    noBtn.style.left = "0px";
+    noBtn.style.right = "auto";
+    noBtn.style.transform = translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);
+  }
 
   function place(nx, ny){
-    var maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
-    var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
-    x = clamp(nx, pad, maxX);
-    y = clamp(ny, pad, maxY);
-    noBtn.style.transform = "translate(" + x + "px," + y + "px)";
+    const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+    const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+
+    nx = clamp(nx, pad, maxX);
+    ny = clamp(ny, pad, maxY);
+
+    // If it would overlap YES, keep trying random valid spots
+    if(overlapsYes(nx, ny)){
+      let found = false;
+      for(let i=0;i<40;i++){
+        const rx = pad + Math.random() * (maxX - pad);
+        const ry = pad + Math.random() * (maxY - pad);
+        if(!overlapsYes(rx, ry)){
+          nx = rx; ny = ry;
+          found = true;
+          break;
+        }
+      }
+      // If still not found (extremely rare), shove it to a corner away from YES
+      if(!found){
+        nx = maxX;
+        ny = maxY;
+      }
+    }
+
+    x = nx; y = ny;
+    applyTransform();
   }
 
   function center(){
@@ -176,67 +229,57 @@
   }
 
   function arenaLocal(clientX, clientY){
-    var r = arena.getBoundingClientRect();
+    const r = arena.getBoundingClientRect();
     return { px: clientX - r.left, py: clientY - r.top };
   }
 
-  function dodgeFrom(px, py){
-    var c = center();
-    var dx = c.cx - px;
-    var dy = c.cy - py;
-    var d = Math.sqrt(dx*dx + dy*dy);
-    if(d > triggerRadius) return;
+  function dodgeFrom(px, py, force){
+    const c = center();
+    let dx = c.cx - px;
+    let dy = c.cy - py;
+    let d = Math.hypot(dx, dy);
 
-    if(d < 1){ dx = 1; dy = 1; d = 1; }
+    if(!force && d > triggerRadius) return;
+
+    if(d < 0.5){ dx = 1; dy = 1; d = 1; }
     dx /= d; dy /= d;
 
-    // slight randomness like the original
-    var ang = (Math.random() * 0.9 - 0.45);
-    var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
-    var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
+    const ang = (Math.random() * 0.9 - 0.45);
+    const jx = dx * Math.cos(ang) - dy * Math.sin(ang);
+    const jy = dx * Math.sin(ang) + dy * Math.cos(ang);
 
-    var jump = jumpMin + Math.random() * (jumpMax - jumpMin);
+    const jump = jumpMin + Math.random() * (jumpMax - jumpMin);
     place(x + jx * jump, y + jy * jump);
   }
 
-  // init: switch NO from right/top fallback to transform positioning
   function init(){
-    noBtn.style.left = "0px";
-    noBtn.style.right = "auto";
+    // start to the right, same row, but guaranteed not overlapping YES
     place(arena.clientWidth * 0.62, 110);
   }
 
   requestAnimationFrame(init);
 
-  arena.addEventListener("mousemove", function(e){
-    var p = arenaLocal(e.clientX, e.clientY);
-    dodgeFrom(p.px, p.py);
+  arena.addEventListener("mousemove", (e) => {
+    const p = arenaLocal(e.clientX, e.clientY);
+    dodgeFrom(p.px, p.py, false);
   });
 
-  noBtn.addEventListener("touchstart", function(e){
-    // prevent Safari link behavior + stop bubbling
+  noBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const t = e.touches[0];
+    const p = arenaLocal(t.clientX, t.clientY);
+    dodgeFrom(p.px, p.py, true);
+  }, { passive:false });
 
-    var t = e.touches[0];
-    var p = arenaLocal(t.clientX, t.clientY);
-
-    // force a dodge on tap attempt
-    var saved = triggerRadius;
-    triggerRadius = 9999;
-    dodgeFrom(p.px, p.py);
-    triggerRadius = saved;
-  }, {passive:false});
-
-  // ✅ THIS is the key: if you tap NO, it can never “press” YES.
-  noBtn.addEventListener("click", function(e){
+  noBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    // also dodge on click attempts (desktop)
+    dodgeFrom(0, 0, true);
   });
 
-  window.addEventListener("resize", function(){
-    init();
-  });
+  window.addEventListener("resize", () => requestAnimationFrame(init));
 })();
 </script>
 
