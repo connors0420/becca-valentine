@@ -1,81 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Be My Valentine 💖</title>
 
 <style>
-  body {
-    margin: 0;
-    height: 100vh;
+  body{
+    margin:0;
+    height:100vh;
     background: linear-gradient(135deg, #ffd1dc, #ffe6eb);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     font-family: Arial, sans-serif;
+    overflow:hidden;
   }
 
-  .card {
-    background: white;
-    padding: 45px 60px;
-    border-radius: 22px;
-    width: 560px; /* wider = one-line text */
-    text-align: center;
-    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+  .card{
+    background:#fff;
+    padding:44px 64px;
+    border-radius:22px;
+    width:min(680px, 92vw);
+    text-align:center;
+    box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
 
-  .cat {
-    font-size: 60px;
+  /* Cute cat icon (SVG) */
+  .catWrap{
+    display:flex;
+    justify-content:center;
+    margin-bottom:10px;
+  }
+  .catSvg{
+    width:92px;
+    height:92px;
   }
 
-  h1 {
-    margin: 20px 0;
-    white-space: nowrap; /* force single line */
+  h1{
+    margin: 14px 0 10px;
+    font-size: 34px;
+    font-weight: 700;
+    white-space: nowrap;       /* keep on one line */
+    overflow: hidden;
+    text-overflow: ellipsis;   /* safety on tiny screens */
   }
 
-  .buttons {
-    margin-top: 35px;
+  .buttons{
+    margin-top: 26px;
     position: relative;
-    height: 180px; /* more space to run */
+    height: 210px;            /* more playground space */
+    width: 100%;
   }
 
-  button {
-    padding: 14px 32px;
+  button{
+    padding: 14px 34px;
     font-size: 18px;
     border-radius: 12px;
     border: none;
     cursor: pointer;
     position: absolute;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #yes {
-    background: #ff4d6d;
-    color: white;
-    left: 50%;
-    transform: translateX(-150%);
-    transition: transform 0.2s ease;
+  #yes{
+    background:#ff4d6d;
+    color:#fff;
+    left:50%;
+    transform: translateX(-160%);
+    transition: transform 0.18s ease;
+  }
+  #yes:hover{
+    transform: translateX(-160%) scale(1.25);
   }
 
-  #yes:hover {
-    transform: translateX(-150%) scale(1.25);
+  #no{
+    background:#ddd;
+    left:50%;
+    transform: translateX(35%);
+    transition: transform 0.10s ease;
   }
 
-  #no {
-    background: #ddd;
-    left: 50%;
-    transform: translateX(30%);
-  }
-
-  .shy {
-    margin-top: 70px;
+  .shy{
+    margin-top: 62px;
     font-size: 14px;
     color: #666;
   }
 
-  img {
+  /* YAY bounce */
+  .yay{
+    margin: 10px 0 0;
+    font-size: 34px;
+    font-weight: 800;
+    animation: yayBounce 0.8s ease;
+  }
+  @keyframes yayBounce{
+    0%{ transform: scale(0.7); opacity: 0.2; }
+    45%{ transform: scale(1.2); opacity: 1; }
+    70%{ transform: scale(0.95); }
+    100%{ transform: scale(1); }
+  }
+
+  img{
     max-width: 100%;
     border-radius: 14px;
-    margin-top: 25px;
+    margin-top: 22px;
+  }
+
+  /* Confetti */
+  .confetti{
+    position: fixed;
+    top: -10px;
+    width: 10px;
+    height: 14px;
+    border-radius: 2px;
+    opacity: 0.95;
+    animation: fall linear forwards;
+    pointer-events:none;
+  }
+  @keyframes fall{
+    to{
+      transform: translateY(110vh) rotate(720deg);
+      opacity: 1;
+    }
   }
 </style>
 </head>
@@ -83,14 +131,39 @@
 <body>
 
 <div class="card" id="card">
-  <div class="cat">🐱💖</div>
+  <div class="catWrap" aria-hidden="true">
+    <!-- Original SVG cat icon in the same vibe as your reference -->
+    <svg class="catSvg" viewBox="0 0 120 120">
+      <!-- head -->
+      <circle cx="60" cy="64" r="40" fill="#F2B37B"/>
+      <!-- ears -->
+      <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
+      <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
+      <!-- heart -->
+      <path d="M88 22
+               C88 16, 96 14, 100 20
+               C104 14, 112 16, 112 22
+               C112 32, 100 38, 100 38
+               C100 38, 88 32, 88 22Z"
+            fill="#FF4D6D"/>
+      <!-- eyes -->
+      <circle cx="48" cy="62" r="4.2" fill="#222"/>
+      <circle cx="72" cy="62" r="4.2" fill="#222"/>
+      <!-- nose -->
+      <path d="M60 70 C56 70, 54 75, 60 78 C66 75, 64 70, 60 70Z" fill="#FF6B8A"/>
+      <!-- tiny mouth -->
+      <path d="M56 80 C58 82, 62 82, 64 80" stroke="#444" stroke-width="3" stroke-linecap="round" fill="none"/>
+    </svg>
+  </div>
+
   <h1>Becca, will you be my Valentine?</h1>
 
-  <div class="buttons">
+  <div class="buttons" id="arena">
     <button id="yes" onclick="yesClick()">Yes</button>
+
     <button id="no"
       onmouseover="moveNo()"
-      ontouchstart="moveNo()">
+      ontouchstart="moveNo(); return false;">
       No
     </button>
   </div>
@@ -99,26 +172,102 @@
 </div>
 
 <script>
-  function moveNo() {
+  // “No” gets more scared over time
+  let noRuns = 0;
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+  function moveNo(){
     const noBtn = document.getElementById("no");
-    const parent = noBtn.parentElement;
+    const arena = document.getElementById("arena");
 
-    const maxX = parent.offsetWidth - noBtn.offsetWidth;
-    const maxY = parent.offsetHeight - noBtn.offsetHeight;
+    // Increase chaos each time
+    noRuns += 1;
 
+    const maxX = arena.clientWidth - noBtn.offsetWidth;
+    const maxY = arena.clientHeight - noBtn.offsetHeight;
+
+    // “Runs farther” each time: allow bigger jumps, but keep inside arena
+    const jumpBoost = clamp(1 + noRuns * 0.12, 1, 2.2);
+
+    // Pick a new spot
     const x = Math.random() * maxX;
     const y = Math.random() * maxY;
 
-    noBtn.style.left = x + "px";
-    noBtn.style.top = y + "px";
+    noBtn.style.left = (x * jumpBoost) + "px";
+    noBtn.style.top  = (y * jumpBoost) + "px";
+
+    // Keep it on-screen
+    const left = parseFloat(noBtn.style.left) || 0;
+    const top  = parseFloat(noBtn.style.top) || 0;
+    noBtn.style.left = clamp(left, 0, maxX) + "px";
+    noBtn.style.top  = clamp(top,  0, maxY) + "px";
+
+    // “Shrinks in fear” a bit more each time (down to 70%)
+    const shrink = clamp(1 - noRuns * 0.03, 0.70, 1);
+    // Tiny wobble too
+    const wobble = (Math.random() * 12 - 6).toFixed(1);
+    noBtn.style.transform = scale(${shrink}) rotate(${wobble}deg);
   }
 
-  function yesClick() {
+  function confettiBurst(count){
+    for(let i=0;i<count;i++){
+      const c = document.createElement("div");
+      c.className = "confetti";
+
+      // random color
+      const colors = ["#ff4d6d","#ffd166","#06d6a0","#4dabf7","#b197fc","#ff8fab"];
+      c.style.background = colors[Math.floor(Math.random()*colors.length)];
+
+      // random horizontal position
+      c.style.left = (Math.random()*100) + "vw";
+
+      // random fall duration
+      const dur = (Math.random()*1.2 + 1.4).toFixed(2);
+      c.style.animationDuration = dur + "s";
+
+      // random delay
+      c.style.animationDelay = (Math.random()*0.25).toFixed(2) + "s";
+
+      // random size
+      const w = Math.random()*6 + 6;
+      const h = Math.random()*10 + 10;
+      c.style.width = w + "px";
+      c.style.height = h + "px";
+
+      document.body.appendChild(c);
+
+      // cleanup
+      setTimeout(()=> c.remove(), (parseFloat(dur) + 0.6) * 1000);
+    }
+  }
+
+  function yesClick(){
+    // confetti first
+    confettiBurst(90);
+
     document.getElementById("card").innerHTML = `
-      <div class="cat">🐱🎉</div>
+      <div class="catWrap" aria-hidden="true">
+        <svg class="catSvg" viewBox="0 0 120 120">
+          <circle cx="60" cy="64" r="40" fill="#F2B37B"/>
+          <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"/>
+          <path d="M87 40 L76 22 L66 45 Z" fill="#E9A56F"/>
+          <path d="M88 22
+                   C88 16, 96 14, 100 20
+                   C104 14, 112 16, 112 22
+                   C112 32, 100 38, 100 38
+                   C100 38, 88 32, 88 22Z"
+                fill="#FF4D6D"/>
+          <circle cx="48" cy="62" r="4.2" fill="#222"/>
+          <circle cx="72" cy="62" r="4.2" fill="#222"/>
+          <path d="M60 70 C56 70, 54 75, 60 78 C66 75, 64 70, 60 70Z" fill="#FF6B8A"/>
+          <path d="M56 80 C58 82, 62 82, 64 80" stroke="#444" stroke-width="3" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+
       <h1>Becca, will you be my Valentine?</h1>
-      <h2>YAY!!! 💖</h2>
-      <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif">
+      <div class="yay">YAY!!! 🎉</div>
+      <img alt="celebration gif" src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" />
     `;
   }
 </script>
