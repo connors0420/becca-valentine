@@ -33,7 +33,6 @@
       font-weight: 800;
       font-size: clamp(24px, 7vw, 36px);
       line-height: 1.15;
-      white-space: normal;
     }
 
     .screen{ display:none; }
@@ -46,7 +45,6 @@
       width: 100%;
     }
 
-    /* Simple, tappable buttons */
     .btn{
       position:absolute;
       padding: 14px 34px;
@@ -56,8 +54,6 @@
       cursor: pointer;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
-
-      /* iOS tap friendliness */
       touch-action: manipulation;
     }
 
@@ -76,8 +72,8 @@
     #noBtn{
       background:#ddd;
       color:#111;
-      left: 0px; /* JS will set */
-      top: 0px;  /* JS will set */
+      left:0;
+      top:0;
     }
 
     .shy{
@@ -86,10 +82,10 @@
       color: #666;
     }
 
-    .yay{
-      margin: 10px 0 12px;
-      font-size: 32px;
-      font-weight: 800;
+    .endText{
+      margin: 12px 0 16px;
+      font-size: 26px;
+      font-weight: 700;
     }
 
     img{
@@ -130,7 +126,7 @@
     <!-- YES -->
     <div id="yesScreen" class="screen">
       <h1>Becca, will you be my Valentine?</h1>
-      <div class="yay">YAY!!! 🎉</div>
+      <div class="endText">So that’s a yes? 😏</div>
       <img alt="Kip says yes" src="kip.gif">
     </div>
   </div>
@@ -143,9 +139,6 @@
       const qScreen = document.getElementById("questionScreen");
       const yScreen = document.getElementById("yesScreen");
 
-      if(!arena || !yesBtn || !noBtn || !qScreen || !yScreen) return;
-
-      // YES -> show success screen
       yesBtn.addEventListener("click", () => {
         qScreen.classList.remove("active");
         yScreen.classList.add("active");
@@ -153,17 +146,15 @@
 
       const pad = 12;
 
-      function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+      function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
-      function placeNo(x, y){
+      function placeNo(x,y){
         const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
         const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
-
-        // Keep NO on right half so it doesn’t drift onto YES
         const minX = Math.max(pad, Math.floor(arena.clientWidth * 0.55));
 
         noBtn.style.left = clamp(x, minX, maxX) + "px";
-        noBtn.style.top  = clamp(y, pad,  maxY) + "px";
+        noBtn.style.top  = clamp(y, pad, maxY) + "px";
       }
 
       function randomJump(){
@@ -174,36 +165,32 @@
         const x = minX + Math.random() * Math.max(1, (maxX - minX));
         const y = pad  + Math.random() * Math.max(1, (maxY - pad));
 
-        placeNo(x, y);
+        placeNo(x,y);
       }
 
       function init(){
-        // Start level with YES (viral look)
         const ar = arena.getBoundingClientRect();
         const yr = yesBtn.getBoundingClientRect();
-        const startY = (yr.top - ar.top);
+
+        // CENTER align vertically with YES
+        const yesCenterY = (yr.top - ar.top) + (yr.height / 2) - (noBtn.offsetHeight / 2);
         const startX = (yr.right - ar.left) + 80;
-        placeNo(startX, startY);
+
+        placeNo(startX, yesCenterY);
       }
 
-      // Make NO dodge:
-      // Desktop: when you hover near it (mouseover)
-      // Mobile: when you try to tap it (touchstart)
-      noBtn.addEventListener("mouseover", () => randomJump());
-      noBtn.addEventListener("touchstart", (e) => {
+      noBtn.addEventListener("mouseover", randomJump);
+      noBtn.addEventListener("touchstart", (e)=>{
         e.preventDefault();
         randomJump();
-      }, { passive:false });
-
-      // Optional: also dodge on click attempt (desktop)
-      noBtn.addEventListener("click", (e) => {
+      }, {passive:false});
+      noBtn.addEventListener("click", (e)=>{
         e.preventDefault();
         randomJump();
       });
 
-      // Init after layout
       requestAnimationFrame(init);
-      window.addEventListener("resize", () => requestAnimationFrame(init));
+      window.addEventListener("resize", ()=>requestAnimationFrame(init));
     })();
   </script>
 </body>
