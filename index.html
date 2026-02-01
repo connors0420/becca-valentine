@@ -37,11 +37,8 @@
     white-space: normal;
   }
 
-  /* YES screen toggle */
-  .screen { display:block; }
-  #yes:target ~ .card #questionScreen { display:none; }
-  #yes:target ~ .card #yesScreen { display:block; }
-  #yesScreen{ display:none; }
+  .screen{ display:none; }
+  .screen.active{ display:block; }
 
   .arena{
     margin-top: 26px;
@@ -51,7 +48,6 @@
   }
 
   .btn{
-    display:inline-block;
     padding: 14px 34px;
     font-size: 18px;
     border-radius: 12px;
@@ -59,7 +55,11 @@
     position: absolute;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
-    text-decoration:none;
+    border: 0;
+    font-family: inherit;
+
+    /* iOS / pointer behavior */
+    touch-action: manipulation;
   }
 
   .yes{
@@ -69,23 +69,18 @@
     top:110px;
     transform: translateX(-165%);
     z-index: 2;
-  }
-
-  .yes:hover{
-    transform: translateX(-165%) scale(1.12);
     transition: transform 160ms ease;
   }
+  .yes:hover{
+    transform: translateX(-165%) scale(1.12);
+  }
 
-  /* fallback for NO if JS fails */
   .no{
     background:#ddd;
     color:#111;
-    top:110px;
-    right:28px;
-    left:auto;
+    z-index: 3; /* keep it tappable */
     transition: transform 170ms ease-out;
     will-change: transform;
-    z-index: 1;
   }
 
   .shy{
@@ -110,8 +105,6 @@
 
 <body>
 
-<a id="yes"></a>
-
 <div class="card">
   <div class="catWrap" aria-hidden="true">
     <svg class="catSvg" viewBox="0 0 120 120">
@@ -127,12 +120,12 @@
   </div>
 
   <!-- QUESTION -->
-  <div id="questionScreen" class="screen">
+  <div id="questionScreen" class="screen active">
     <h1>Becca, will you be my Valentine?</h1>
 
     <div class="arena" id="arena">
-      <a class="btn yes" id="yesBtn" href="#yes">Yes</a>
-      <a class="btn no" id="noBtn" href="#">No</a>
+      <button class="btn yes" id="yesBtn" type="button">Yes</button>
+      <button class="btn no" id="noBtn" type="button">No</button>
     </div>
 
     <div class="shy">"No" seems a bit shy 😈</div>
@@ -147,76 +140,44 @@
 </div>
 
 <script>
-(function(){
+(() => {
   const arena = document.getElementById("arena");
   const yesBtn = document.getElementById("yesBtn");
   const noBtn  = document.getElementById("noBtn");
-  if(!arena || !yesBtn || !noBtn) return;
+  const qScreen = document.getElementById("questionScreen");
+  const yScreen = document.getElementById("yesScreen");
+  if(!arena || !yesBtn || !noBtn || !qScreen || !yScreen) return;
 
+  // --- screen toggle ---
+  yesBtn.addEventListener("click", () => {
+    qScreen.classList.remove("active");
+    yScreen.classList.add("active");
+  });
+
+  // --- movement tuning (viral feel) ---
   const pad = 12;
-  const yesBuffer = 22;      // keep NO away from YES
-  const noFlyMargin = 18;    // extra padding around YES area
-  const triggerRadius = 95;
+  const triggerRadius = 95; // desktop proximity
+  const jumpMin = 150;
+  const jumpMax = 235;
 
-  // stronger jumps like the viral one
-  const jumpMin = 140;
-  const jumpMax = 220;
+  // Keep NO roughly on the right half so it starts like the viral video
+  const keepRightBias = 0.58;
 
   let x = 0, y = 0;
 
-  const clamp = (n,min,max) => Math.max(min, Math.min(max, n));
-
-  function rects(){
-    const ar = arena.getBoundingClientRect();
-    const yr = yesBtn.getBoundingClientRect();
-    return { ar, yr };
-  }
-
-  function yesZone(){
-    const { ar, yr } = rects();
-    return {
-      left:   (yr.left  - ar.left) - (noFlyMargin + yesBuffer),
-      right:  (yr.right - ar.left) + (noFlyMargin + yesBuffer),
-      top:    (yr.top   - ar.top)  - (noFlyMargin),
-      bottom: (yr.bottom- ar.top)  + (noFlyMargin)
-    };
-  }
-
-  function overlapsYes(nx, ny){
-    const z = yesZone();
-    const l = nx, t = ny;
-    const r = nx + noBtn.offsetWidth;
-    const b = ny + noBtn.offsetHeight;
-    return !(r < z.left || l > z.right || b < z.top || t > z.bottom);
-  }
-
-  function apply(){
-    noBtn.style.left = "0px";
-    noBtn.style.right = "auto";
-    noBtn.style.transform = translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);
-  }
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
   function place(nx, ny){
     const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
     const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
 
-    nx = clamp(nx, pad, maxX);
-    ny = clamp(ny, pad, maxY);
+    // bias: don't let it live too far left (prevents overlap-ish frustration)
+    const minX = Math.max(pad, arena.clientWidth * keepRightBias);
 
-    if(overlapsYes(nx, ny)){
-      // try many random spots to preserve “jump” feel
-      for(let i=0;i<60;i++){
-        const rx = pad + Math.random() * (maxX - pad);
-        const ry = pad + Math.random() * (maxY - pad);
-        if(!overlapsYes(rx, ry)){
-          nx = rx; ny = ry;
-          break;
-        }
-      }
-    }
+    x = clamp(nx, minX, maxX);
+    y = clamp(ny, pad, maxY);
 
-    x = nx; y = ny;
-    apply();
+    noBtn.style.transform = translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);
   }
 
   function arenaLocal(clientX, clientY){
@@ -224,24 +185,25 @@
     return { px: clientX - r.left, py: clientY - r.top };
   }
 
-  function bigRandomJump(forceAwayFrom){
-    const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
-    const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+  function center(){
+    return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
+  }
 
-    // pick a random direction-ish, but include a big random component
-    let dx = (Math.random() * 2 - 1);
-    let dy = (Math.random() * 2 - 1);
+  function bigJump(awayFrom){
+    // awayFrom is optional {px, py} in arena coords
+    let dx = (Math.random()*2 - 1);
+    let dy = (Math.random()*2 - 1);
 
-    // if we have a point to run away from, bias away from it
-    if(forceAwayFrom){
-      const cx = x + noBtn.offsetWidth/2;
-      const cy = y + noBtn.offsetHeight/2;
-      let ax = cx - forceAwayFrom.px;
-      let ay = cy - forceAwayFrom.py;
+    if(awayFrom){
+      const c = center();
+      let ax = c.cx - awayFrom.px;
+      let ay = c.cy - awayFrom.py;
       const d = Math.hypot(ax, ay) || 1;
       ax /= d; ay /= d;
-      dx = (dx * 0.35) + (ax * 0.65);
-      dy = (dy * 0.35) + (ay * 0.65);
+
+      // strong bias away, but still random
+      dx = dx * 0.25 + ax * 0.75;
+      dy = dy * 0.25 + ay * 0.75;
     }
 
     const d2 = Math.hypot(dx, dy) || 1;
@@ -249,51 +211,45 @@
 
     const jump = jumpMin + Math.random() * (jumpMax - jumpMin);
 
-    // add a little sideways randomness so it doesn’t feel “linear”
-    const rx = (Math.random() * 50 - 25);
-    const ry = (Math.random() * 50 - 25);
+    // extra randomness so it doesn't feel "side-to-side"
+    const rx = (Math.random()*70 - 35);
+    const ry = (Math.random()*70 - 35);
 
-    place(x + dx * jump + rx, y + dy * jump + ry);
+    place(x + dx*jump + rx, y + dy*jump + ry);
   }
 
+  // Start: level with YES, to the right (viral look)
   function init(){
-    // Start level with YES, to the right (viral look)
-    const { ar, yr } = rects();
-    const startY = (yr.top - ar.top); // same top as YES
-    const startX = (yr.right - ar.left) + 80; // right of YES
+    const ar = arena.getBoundingClientRect();
+    const yr = yesBtn.getBoundingClientRect();
+    const startY = (yr.top - ar.top);
+    const startX = (yr.right - ar.left) + 80;
     place(startX, startY);
   }
 
   requestAnimationFrame(init);
+  window.addEventListener("resize", () => requestAnimationFrame(init));
 
-  // Desktop: if cursor gets close, jump away (but with big jumps)
-  arena.addEventListener("mousemove", (e) => {
+  // Desktop: jump when cursor gets close
+  arena.addEventListener("pointermove", (e) => {
+    // Only do proximity running for mouse/trackpad
+    if(e.pointerType !== "mouse") return;
+
     const p = arenaLocal(e.clientX, e.clientY);
-    const cx = x + noBtn.offsetWidth/2;
-    const cy = y + noBtn.offsetHeight/2;
-    const dist = Math.hypot(cx - p.px, cy - p.py);
+    const c = center();
+    const dist = Math.hypot(c.cx - p.px, c.cy - p.py);
     if(dist <= triggerRadius){
-      bigRandomJump(p);
+      bigJump(p);
     }
   });
 
-  // Mobile: jump when you try to tap NO
-  noBtn.addEventListener("touchstart", (e) => {
+  // Mobile: jump when you try to tap NO (this is the “viral” behavior)
+  noBtn.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const t = e.touches[0];
-    const p = arenaLocal(t.clientX, t.clientY);
-    bigRandomJump(p);
-  }, { passive:false });
-
-  // Desktop click attempt: jump too
-  noBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    bigRandomJump({px: -9999, py: -9999});
+    const p = arenaLocal(e.clientX, e.clientY);
+    bigJump(p);
   });
-
-  window.addEventListener("resize", () => requestAnimationFrame(init));
 })();
 </script>
 
