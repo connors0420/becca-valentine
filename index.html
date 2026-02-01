@@ -21,7 +21,7 @@
     background:#fff;
     padding:48px 72px;
     border-radius:22px;
-    width:min(860px, 94vw);      /* BIGGER card */
+    width:min(860px, 94vw);
     text-align:center;
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
@@ -33,12 +33,12 @@
     margin: 14px 0 10px;
     font-size: 36px;
     font-weight: 700;
-    white-space: nowrap;         /* keep in one line */
+    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;     /* safety for tiny screens */
+    text-overflow: ellipsis;
   }
 
-  /* YES screen controlled by :target (works without JS) */
+  /* YES screen via :target */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
@@ -47,7 +47,7 @@
   .buttons{
     margin-top: 28px;
     position: relative;
-    height: 360px;              /* BIGGER playground */
+    height: 380px;     /* more space */
     width: 100%;
   }
 
@@ -68,7 +68,7 @@
     background:#ff4d6d;
     color:#fff;
     left:50%;
-    top: 120px;
+    top: 140px;
     transform: translateX(-165%);
     transition: transform 0.18s ease;
   }
@@ -76,18 +76,14 @@
     transform: translateX(-165%) scale(1.25);
   }
 
-  /* Smooth movement for magnet feel */
+  /* NO: we only animate via transform translate3d for smoothness */
   .no{
     background:#ddd;
     color:#111;
     left:50%;
-    top: 120px;
-    transform: translateX(35%);
-    transition:
-      left 95ms ease-out,
-      top 95ms ease-out,
-      transform 120ms ease-out;
-    will-change: left, top, transform;
+    top: 140px;
+    transform: translate3d(35%,0,0); /* initial offset like viral */
+    will-change: transform;
   }
 
   .shy{
@@ -119,12 +115,10 @@
 
 <body>
 
-<!-- Target for YES screen -->
 <a id="yes"></a>
 
 <div class="card" id="card">
   <div class="catWrap" aria-hidden="true">
-    <!-- Cute cat icon (original, similar vibe) -->
     <svg class="catSvg" viewBox="0 0 120 120">
       <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
@@ -142,7 +136,6 @@
     </svg>
   </div>
 
-  <!-- QUESTION SCREEN -->
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
@@ -154,7 +147,6 @@
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
-  <!-- YES SCREEN -->
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
@@ -168,108 +160,142 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // “Harder” settings (magnet feel)
-  var repelRadius = 160;     // how close before it starts gliding away
-  var repelStrength = 18;    // bigger = moves faster per frame
-  var shrinkMin = 0.82;      // how scared it gets (smaller = more scared)
-  var pad = 10;              // keep inside arena edges
-  var vx = 0, vy = 0;        // velocity for smooth gliding
-  var lastPointer = null;
+  // Smooth magnet settings (harder = bigger radius/force)
+  var repelRadius = 190;     // start running sooner
+  var maxSpeed    = 18;      // cap speed for smoothness
+  var force       = 1.25;    // how strongly it accelerates away
+  var friction    = 0.86;    // lower = more slippery, higher = more controlled
 
-  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+  var pad = 10;
+  var x = 0, y = 0;          // translation offsets in px
+  var vx = 0, vy = 0;
+  var pointer = null;
 
-  function placeNo(x, y){
+  // Compute arena bounds for the NO button base position
+  function bounds(){
     var maxX = arena.clientWidth - noBtn.offsetWidth - pad;
     var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
-    noBtn.style.left = clamp(x, pad, maxX) + "px";
-    noBtn.style.top  = clamp(y, pad, maxY) + "px";
+    return { maxX:maxX, maxY:maxY };
   }
 
-  // Initial position (nice, like the viral one)
-  // Use absolute placement so JS has a real starting point
-  placeNo(arena.clientWidth * 0.62, 120);
+  // Start near center-right (like viral), in pixels relative to its default left/top
+  x = Math.min(220, arena.clientWidth * 0.25);
+  y = 0;
 
-  function getPointerLocal(clientX, clientY){
+  function setTransform(scale, rot){
+    scale = scale || 1;
+    rot = rot || 0;
+    noBtn.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) scale(" + scale.toFixed(2) + ") rotate(" + rot.toFixed(1) + "deg)";
+  }
+
+  // Map pointer to arena-local coords
+  function localPos(cx, cy){
     var r = arena.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
+    return { px: cx - r.left, py: cy - r.top };
   }
 
   function tick(){
-    if(!lastPointer){
-      requestAnimationFrame(tick);
-      return;
-    }
+    if(pointer){
+      // Current button center in arena coords:
+      // Base position is at left:50% top:140px, but we care about its actual box:
+      var btnLeft = (arena.clientWidth * 0.5) + x; // approx since left:50%
+      // Better: compute actual position from offsets:
+      // We'll use getBoundingClientRect for accuracy:
+      var br = noBtn.getBoundingClientRect();
+      var ar = arena.getBoundingClientRect();
+      var bx = (br.left - ar.left) + br.width/2;
+      var by = (br.top  - ar.top)  + br.height/2;
 
-    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
-    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
+      var dx = bx - pointer.px;
+      var dy = by - pointer.py;
+      var d = Math.sqrt(dx*dx + dy*dy);
 
-    var dx = bx - lastPointer.x;
-    var dy = by - lastPointer.y;
-    var d = Math.sqrt(dx*dx + dy*dy);
+      if(d < repelRadius){
+        if(d < 0.001){ dx = 1; dy = 1; d = 1; }
+        dx /= d; dy /= d;
 
-    // Only repel when pointer is close enough
-    if(d < repelRadius){
-      // Normalize away vector
-      if(d < 0.001){ dx = 1; dy = 1; d = 1; }
-      dx /= d; dy /= d;
+        var closeness = (repelRadius - d) / repelRadius; // 0..1
+        var ax = dx * force * (6 + 14 * closeness);
+        var ay = dy * force * (6 + 14 * closeness);
 
-      // The closer you get, the stronger the push
-      var closeness = (repelRadius - d) / repelRadius; // 0..1
-      var push = repelStrength * (0.6 + 1.2 * closeness);
+        vx += ax;
+        vy += ay;
 
-      // Add push to velocity (smooth gliding)
-      vx += dx * push;
-      vy += dy * push;
+        // tiny drift to avoid edge trapping
+        vx += (Math.random()*2 - 1) * 0.18;
+        vy += (Math.random()*2 - 1) * 0.18;
 
-      // Add tiny random drift so it doesn't get trapped on edges
-      vx += (Math.random()*2 - 1) * 0.6;
-      vy += (Math.random()*2 - 1) * 0.6;
+        // fear look
+        var s = 1 - closeness * 0.20;
+        if(s < 0.84) s = 0.84;
+        var rot = (Math.random()*6 - 3);
+        // cap speed
+        var sp = Math.sqrt(vx*vx + vy*vy);
+        if(sp > maxSpeed){
+          vx = vx / sp * maxSpeed;
+          vy = vy / sp * maxSpeed;
+        }
 
-      // “Shrink in fear” based on closeness
-      var s = clamp(1 - closeness * 0.22, shrinkMin, 1);
-      var wobble = (Math.random()*8 - 4);
-      noBtn.style.transform = "scale(" + s.toFixed(2) + ") rotate(" + wobble.toFixed(1) + "deg)";
+        // apply friction + move
+        vx *= friction;
+        vy *= friction;
+        x += vx;
+        y += vy;
+
+        // clamp inside arena by using real rects + padding
+        var b = bounds();
+        // Instead of clamping x/y directly (hard), we’ll gently steer back if near edges:
+        var nr = noBtn.getBoundingClientRect();
+        var ar2 = arena.getBoundingClientRect();
+        var left = nr.left - ar2.left;
+        var top  = nr.top  - ar2.top;
+
+        if(left < pad){ x += (pad - left) * 0.35; vx *= 0.6; }
+        if(top  < pad){ y += (pad - top)  * 0.35; vy *= 0.6; }
+        if(left > b.maxX){ x -= (left - b.maxX) * 0.35; vx *= 0.6; }
+        if(top  > b.maxY){ y -= (top - b.maxY)  * 0.35; vy *= 0.6; }
+
+        setTransform(s, rot);
+      } else {
+        // drift slows when pointer is far
+        vx *= 0.88;
+        vy *= 0.88;
+        x += vx;
+        y += vy;
+        setTransform(1, 0);
+      }
     } else {
-      // Calm down when far away
-      noBtn.style.transform = "";
+      setTransform(1, 0);
     }
-
-    // Apply friction so it doesn't accelerate forever
-    vx *= 0.78;
-    vy *= 0.78;
-
-    // Move
-    placeNo(noBtn.offsetLeft + vx, noBtn.offsetTop + vy);
 
     requestAnimationFrame(tick);
   }
 
-  // Desktop pointer
+  // Desktop pointer tracking
   arena.addEventListener("mousemove", function(e){
-    lastPointer = getPointerLocal(e.clientX, e.clientY);
+    pointer = localPos(e.clientX, e.clientY);
   });
 
-  // Mobile finger
+  // Mobile finger tracking
   arena.addEventListener("touchstart", function(e){
     if(e.touches && e.touches[0]){
       var t = e.touches[0];
-      lastPointer = getPointerLocal(t.clientX, t.clientY);
+      pointer = localPos(t.clientX, t.clientY);
     }
   }, {passive:true});
 
   arena.addEventListener("touchmove", function(e){
     if(e.touches && e.touches[0]){
       var t = e.touches[0];
-      lastPointer = getPointerLocal(t.clientX, t.clientY);
+      pointer = localPos(t.clientX, t.clientY);
     }
   }, {passive:true});
 
-  // If they try to tap the No button, treat it like a pointer got close
+  // If they try to tap the No button, shove it
   noBtn.addEventListener("touchstart", function(e){
-    // force a “near” pointer at the center of the button
-    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
-    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
-    lastPointer = { x: bx, y: by };
+    var br = noBtn.getBoundingClientRect();
+    var ar = arena.getBoundingClientRect();
+    pointer = { px: (br.left - ar.left) + br.width/2, py: (br.top - ar.top) + br.height/2 };
   }, {passive:true});
 
   requestAnimationFrame(tick);
