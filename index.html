@@ -68,6 +68,7 @@
     left:50%;
     top:110px;
     transform: translateX(-165%);
+    z-index: 2;
   }
 
   .yes:hover{
@@ -75,15 +76,16 @@
     transition: transform 160ms ease;
   }
 
-  /* fallback placement for NO if JS fails */
+  /* fallback for NO if JS fails */
   .no{
     background:#ddd;
     color:#111;
     top:110px;
     right:28px;
     left:auto;
-    transition: transform 160ms ease-out;
+    transition: transform 170ms ease-out;
     will-change: transform;
+    z-index: 1;
   }
 
   .shy{
@@ -152,12 +154,13 @@
   if(!arena || !yesBtn || !noBtn) return;
 
   const pad = 12;
-  const triggerRadius = 90;
-  const jumpMin = 110;
-  const jumpMax = 170;
+  const yesBuffer = 22;      // keep NO away from YES
+  const noFlyMargin = 18;    // extra padding around YES area
+  const triggerRadius = 95;
 
-  // HARD RULE: NO can never overlap the YES rectangle (with margin)
-  const noFlyMargin = 32;
+  // stronger jumps like the viral one
+  const jumpMin = 140;
+  const jumpMax = 220;
 
   let x = 0, y = 0;
 
@@ -172,10 +175,10 @@
   function yesZone(){
     const { ar, yr } = rects();
     return {
-      left:   (yr.left  - ar.left) - noFlyMargin,
-      right:  (yr.right - ar.left) + noFlyMargin,
-      top:    (yr.top   - ar.top)  - noFlyMargin,
-      bottom: (yr.bottom- ar.top)  + noFlyMargin
+      left:   (yr.left  - ar.left) - (noFlyMargin + yesBuffer),
+      right:  (yr.right - ar.left) + (noFlyMargin + yesBuffer),
+      top:    (yr.top   - ar.top)  - (noFlyMargin),
+      bottom: (yr.bottom- ar.top)  + (noFlyMargin)
     };
   }
 
@@ -187,8 +190,7 @@
     return !(r < z.left || l > z.right || b < z.top || t > z.bottom);
   }
 
-  function applyTransform(){
-    // Switch from right/top fallback to transform positioning
+  function apply(){
     noBtn.style.left = "0px";
     noBtn.style.right = "auto";
     noBtn.style.transform = translate(${x.toFixed(1)}px, ${y.toFixed(1)}px);
@@ -201,31 +203,20 @@
     nx = clamp(nx, pad, maxX);
     ny = clamp(ny, pad, maxY);
 
-    // If it would overlap YES, keep trying random valid spots
     if(overlapsYes(nx, ny)){
-      let found = false;
-      for(let i=0;i<40;i++){
+      // try many random spots to preserve “jump” feel
+      for(let i=0;i<60;i++){
         const rx = pad + Math.random() * (maxX - pad);
         const ry = pad + Math.random() * (maxY - pad);
         if(!overlapsYes(rx, ry)){
           nx = rx; ny = ry;
-          found = true;
           break;
         }
-      }
-      // If still not found (extremely rare), shove it to a corner away from YES
-      if(!found){
-        nx = maxX;
-        ny = maxY;
       }
     }
 
     x = nx; y = ny;
-    applyTransform();
-  }
-
-  function center(){
-    return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
+    apply();
   }
 
   function arenaLocal(clientX, clientY){
@@ -233,50 +224,73 @@
     return { px: clientX - r.left, py: clientY - r.top };
   }
 
-  function dodgeFrom(px, py, force){
-    const c = center();
-    let dx = c.cx - px;
-    let dy = c.cy - py;
-    let d = Math.hypot(dx, dy);
+  function bigRandomJump(forceAwayFrom){
+    const maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+    const maxY = arena.clientHeight - noBtn.offsetHeight - pad;
 
-    if(!force && d > triggerRadius) return;
+    // pick a random direction-ish, but include a big random component
+    let dx = (Math.random() * 2 - 1);
+    let dy = (Math.random() * 2 - 1);
 
-    if(d < 0.5){ dx = 1; dy = 1; d = 1; }
-    dx /= d; dy /= d;
+    // if we have a point to run away from, bias away from it
+    if(forceAwayFrom){
+      const cx = x + noBtn.offsetWidth/2;
+      const cy = y + noBtn.offsetHeight/2;
+      let ax = cx - forceAwayFrom.px;
+      let ay = cy - forceAwayFrom.py;
+      const d = Math.hypot(ax, ay) || 1;
+      ax /= d; ay /= d;
+      dx = (dx * 0.35) + (ax * 0.65);
+      dy = (dy * 0.35) + (ay * 0.65);
+    }
 
-    const ang = (Math.random() * 0.9 - 0.45);
-    const jx = dx * Math.cos(ang) - dy * Math.sin(ang);
-    const jy = dx * Math.sin(ang) + dy * Math.cos(ang);
+    const d2 = Math.hypot(dx, dy) || 1;
+    dx /= d2; dy /= d2;
 
     const jump = jumpMin + Math.random() * (jumpMax - jumpMin);
-    place(x + jx * jump, y + jy * jump);
+
+    // add a little sideways randomness so it doesn’t feel “linear”
+    const rx = (Math.random() * 50 - 25);
+    const ry = (Math.random() * 50 - 25);
+
+    place(x + dx * jump + rx, y + dy * jump + ry);
   }
 
   function init(){
-    // start to the right, same row, but guaranteed not overlapping YES
-    place(arena.clientWidth * 0.62, 110);
+    // Start level with YES, to the right (viral look)
+    const { ar, yr } = rects();
+    const startY = (yr.top - ar.top); // same top as YES
+    const startX = (yr.right - ar.left) + 80; // right of YES
+    place(startX, startY);
   }
 
   requestAnimationFrame(init);
 
+  // Desktop: if cursor gets close, jump away (but with big jumps)
   arena.addEventListener("mousemove", (e) => {
     const p = arenaLocal(e.clientX, e.clientY);
-    dodgeFrom(p.px, p.py, false);
+    const cx = x + noBtn.offsetWidth/2;
+    const cy = y + noBtn.offsetHeight/2;
+    const dist = Math.hypot(cx - p.px, cy - p.py);
+    if(dist <= triggerRadius){
+      bigRandomJump(p);
+    }
   });
 
+  // Mobile: jump when you try to tap NO
   noBtn.addEventListener("touchstart", (e) => {
     e.preventDefault();
     e.stopPropagation();
     const t = e.touches[0];
     const p = arenaLocal(t.clientX, t.clientY);
-    dodgeFrom(p.px, p.py, true);
+    bigRandomJump(p);
   }, { passive:false });
 
+  // Desktop click attempt: jump too
   noBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // also dodge on click attempts (desktop)
-    dodgeFrom(0, 0, true);
+    bigRandomJump({px: -9999, py: -9999});
   });
 
   window.addEventListener("resize", () => requestAnimationFrame(init));
