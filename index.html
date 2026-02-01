@@ -38,16 +38,16 @@
     text-overflow: ellipsis;
   }
 
-  /* YES screen via :target */
+  /* YES screen via :target (no JS required) */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
   #yesScreen{ display:none; }
 
-  .buttons{
+  .arena{
     margin-top: 28px;
     position: relative;
-    height: 380px;
+    height: 360px;
     width: 100%;
   }
 
@@ -76,13 +76,14 @@
     transform: translateX(-165%) scale(1.25);
   }
 
+  /* NO uses GPU translate for smooth movement */
   .no{
     background:#ddd;
     color:#111;
     left:50%;
     top: 140px;
-    transform: translate3d(35%,0,0); /* initial offset */
     will-change: transform;
+    transform: translate3d(35%,0,0);
   }
 
   .shy{
@@ -116,8 +117,9 @@
 
 <a id="yes"></a>
 
-<div class="card" id="card">
+<div class="card">
   <div class="catWrap" aria-hidden="true">
+    <!-- Cat icon you liked -->
     <svg class="catSvg" viewBox="0 0 120 120">
       <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
@@ -135,10 +137,11 @@
     </svg>
   </div>
 
+  <!-- QUESTION SCREEN -->
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
-    <div class="buttons" id="arena">
+    <div class="arena" id="arena">
       <a class="btn yes" href="#yes">Yes</a>
       <a class="btn no" id="noBtn" href="javascript:void(0)">No</a>
     </div>
@@ -146,6 +149,7 @@
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
+  <!-- YES SCREEN -->
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
@@ -159,150 +163,120 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // Tuning
-  var repelRadius = 190;
-  var maxSpeed    = 18;
-  var force       = 1.25;
-  var friction    = 0.86;
-  var pad         = 10;
+  // Viral-feel tuning (smooth + not sticky)
+  var repelRadius = 130;       // distance where it starts fleeing
+  var step = 120;              // how far it “jumps” each flee
+  var ease = 0.22;             // smoothing factor (0..1)
+  var pad = 10;
 
+  // Current translation offsets in px
   var x = 0, y = 0;
-  var vx = 0, vy = 0;
+  // Target offsets in px
+  var tx = 0, ty = 0;
+
+  // Pointer state in arena coords
   var pointer = null;
+
+  // Initialize in a nice spot (center-right-ish)
+  tx = Math.min(240, arena.clientWidth * 0.28);
+  ty = 0;
+  x = tx; y = ty;
+
+  function setTransform(){
+    noBtn.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+  }
 
   function localPos(cx, cy){
     var r = arena.getBoundingClientRect();
     return { px: cx - r.left, py: cy - r.top };
   }
 
-  function setTransform(scale, rot){
-    scale = scale || 1;
-    rot = rot || 0;
-    noBtn.style.transform =
-      "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) " +
-      "scale(" + scale.toFixed(2) + ") rotate(" + rot.toFixed(1) + "deg)";
+  function btnCenter(){
+    var br = noBtn.getBoundingClientRect();
+    var ar = arena.getBoundingClientRect();
+    return {
+      bx: (br.left - ar.left) + br.width/2,
+      by: (br.top  - ar.top)  + br.height/2,
+      bw: br.width,
+      bh: br.height
+    };
   }
-
-  // Start near center-right
-  x = Math.min(220, arena.clientWidth * 0.25);
-  y = 0;
 
   function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 
-  // Big random hop inward (used to unstick corners)
-  function randomHop(){
-    var ar = arena.getBoundingClientRect();
+  function keepInside(){
+    // Ensure target (tx,ty) keeps button inside arena
+    var c = btnCenter();
+    var maxX = arena.clientWidth - c.bw - pad;
+    var maxY = arena.clientHeight - c.bh - pad;
+
+    // Convert current button top-left approx:
+    // Since our base is left:50% top:140px, we clamp translation by reading rects:
+    // We'll just clamp translations by steering if close to edges
+    // (simple + stable)
+    // When clamping, bias inward, not hard snap.
     var br = noBtn.getBoundingClientRect();
+    var ar = arena.getBoundingClientRect();
+    var left = br.left - ar.left;
+    var top  = br.top  - ar.top;
 
-    var curLeft = br.left - ar.left;
-    var curTop  = br.top  - ar.top;
-
-    // pick a new target somewhere in the middle-ish area
-    var safeMinX = pad + arena.clientWidth * 0.15;
-    var safeMaxX = arena.clientWidth - pad - arena.clientWidth * 0.15;
-    var safeMinY = pad + arena.clientHeight * 0.15;
-    var safeMaxY = arena.clientHeight - pad - arena.clientHeight * 0.15;
-
-    var targetX = clamp(safeMinX + Math.random() * (safeMaxX - safeMinX), pad, arena.clientWidth - pad);
-    var targetY = clamp(safeMinY + Math.random() * (safeMaxY - safeMinY), pad, arena.clientHeight - pad);
-
-    // convert target button top-left into translation deltas
-    var dx = (targetX - curLeft);
-    var dy = (targetY - curTop);
-
-    // add to translation and give it velocity so it continues moving
-    x += dx;
-    y += dy;
-    vx += (Math.random()*10 - 5);
-    vy += (Math.random()*10 - 5);
+    if(left < pad) tx += (pad - left) * 0.9;
+    if(top  < pad) ty += (pad - top)  * 0.9;
+    if(left > maxX) tx -= (left - maxX) * 0.9;
+    if(top  > maxY) ty -= (top - maxY)  * 0.9;
   }
 
-  // If near edges, hop inward automatically
-  function edgeRescue(){
+  function fleeFrom(px, py){
+    var c = btnCenter();
+    var dx = c.bx - px;
+    var dy = c.by - py;
+    var d = Math.sqrt(dx*dx + dy*dy);
+
+    if(d >= repelRadius) return;
+
+    // Normalize away direction
+    if(d < 0.001){ dx = 1; dy = 1; d = 1; }
+    dx /= d; dy /= d;
+
+    // Add slight randomness so it feels human/viral
+    var jitter = (Math.random() * 0.7 - 0.35);
+    var jx = dx * Math.cos(jitter) - dy * Math.sin(jitter);
+    var jy = dx * Math.sin(jitter) + dy * Math.cos(jitter);
+
+    // Jump target away
+    tx += jx * step;
+    ty += jy * step;
+
+    // Bias inward so corners don’t trap it
     var ar = arena.getBoundingClientRect();
     var br = noBtn.getBoundingClientRect();
-
     var left = br.left - ar.left;
     var top  = br.top  - ar.top;
     var right = (ar.right - br.right);
     var bottom = (ar.bottom - br.bottom);
 
-    // “stuck zone” threshold
+    // If near an edge, push back toward center a bit
     var edge = 18;
+    if(left < edge) tx += 80;
+    if(right < edge) tx -= 80;
+    if(top < edge) ty += 60;
+    if(bottom < edge) ty -= 60;
 
-    if(left < edge || top < edge || right < edge || bottom < edge){
-      randomHop();
-    }
+    keepInside();
   }
 
-  function tick(){
-    if(pointer){
-      var br = noBtn.getBoundingClientRect();
-      var ar = arena.getBoundingClientRect();
-      var bx = (br.left - ar.left) + br.width/2;
-      var by = (br.top  - ar.top)  + br.height/2;
-
-      var dx = bx - pointer.px;
-      var dy = by - pointer.py;
-      var d = Math.sqrt(dx*dx + dy*dy);
-
-      if(d < repelRadius){
-        if(d < 0.001){ dx = 1; dy = 1; d = 1; }
-        dx /= d; dy /= d;
-
-        var closeness = (repelRadius - d) / repelRadius;
-        var ax = dx * force * (6 + 14 * closeness);
-        var ay = dy * force * (6 + 14 * closeness);
-
-        vx += ax;
-        vy += ay;
-
-        // tiny drift to avoid edge trapping
-        vx += (Math.random()*2 - 1) * 0.18;
-        vy += (Math.random()*2 - 1) * 0.18;
-
-        // cap speed
-        var sp = Math.sqrt(vx*vx + vy*vy);
-        if(sp > maxSpeed){
-          vx = vx / sp * maxSpeed;
-          vy = vy / sp * maxSpeed;
-        }
-
-        // fear visuals
-        var s = 1 - closeness * 0.20;
-        if(s < 0.84) s = 0.84;
-        var rot = (Math.random()*6 - 3);
-
-        vx *= friction;
-        vy *= friction;
-        x += vx;
-        y += vy;
-
-        setTransform(s, rot);
-
-        // Rescue if it gets cornered
-        edgeRescue();
-      } else {
-        // calm drift
-        vx *= 0.88;
-        vy *= 0.88;
-        x += vx;
-        y += vy;
-        setTransform(1, 0);
-
-        // still rescue if it drifts into a corner
-        edgeRescue();
-      }
-    } else {
-      setTransform(1, 0);
-    }
-
-    requestAnimationFrame(tick);
+  function animate(){
+    // Smoothly ease current toward target (magnet glide)
+    x += (tx - x) * ease;
+    y += (ty - y) * ease;
+    setTransform();
+    requestAnimationFrame(animate);
   }
 
   // Desktop
   arena.addEventListener("mousemove", function(e){
     pointer = localPos(e.clientX, e.clientY);
+    fleeFrom(pointer.px, pointer.py);
   });
 
   // Mobile
@@ -310,6 +284,7 @@
     if(e.touches && e.touches[0]){
       var t = e.touches[0];
       pointer = localPos(t.clientX, t.clientY);
+      fleeFrom(pointer.px, pointer.py);
     }
   }, {passive:true});
 
@@ -317,21 +292,34 @@
     if(e.touches && e.touches[0]){
       var t = e.touches[0];
       pointer = localPos(t.clientX, t.clientY);
+      fleeFrom(pointer.px, pointer.py);
     }
   }, {passive:true});
 
-  // If they try to click/tap NO: hop randomly so it never feels stuck
+  // If they click/tap the NO button directly, do an extra jump (viral feel)
   noBtn.addEventListener("click", function(e){
     e.preventDefault();
-    randomHop();
+    // pretend pointer is on it to force a flee
+    var c = btnCenter();
+    fleeFrom(c.bx, c.by);
+    // extra nudge
+    tx += (Math.random()*2 - 1) * 80;
+    ty += (Math.random()*2 - 1) * 50;
+    keepInside();
   });
 
   noBtn.addEventListener("touchstart", function(e){
-    // also hop on touch (prevents corner-stall)
-    randomHop();
+    // same on mobile
+    var c = btnCenter();
+    fleeFrom(c.bx, c.by);
+    tx += (Math.random()*2 - 1) * 80;
+    ty += (Math.random()*2 - 1) * 50;
+    keepInside();
   }, {passive:true});
 
-  requestAnimationFrame(tick);
+  // Start
+  setTransform();
+  requestAnimationFrame(animate);
 })();
 </script>
 
