@@ -38,17 +38,16 @@
     text-overflow: ellipsis;
   }
 
-  /* Two screens controlled by :target */
+  /* YES screen via :target (no JS required) */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
-
   #yesScreen{ display:none; }
 
   .buttons{
     margin-top: 26px;
     position: relative;
-    height: 220px;     /* big playground */
+    height: 220px;
     width: 100%;
   }
 
@@ -63,47 +62,26 @@
     text-decoration:none;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease;
   }
 
-  /* YES button */
   .yes{
     background:#ff4d6d;
     color:#fff;
     left:50%;
+    top: 70px;
     transform: translateX(-165%);
-    transition: transform 0.18s ease;
   }
   .yes:hover{
     transform: translateX(-165%) scale(1.25);
   }
 
-  /* NO button (CSS-only “runs away”) */
   .no{
     background:#ddd;
     color:#111;
     left:50%;
+    top: 70px;
     transform: translateX(35%);
-    transform-origin:center;
-  }
-
-  /* On hover (desktop) OR press (mobile), it panics */
-  .no:hover,
-  .no:active{
-    animation: runAway 0.9s linear infinite;
-    transform: translateX(35%) scale(0.78) rotate(-6deg);
-  }
-
-  /* Chaotic path inside the arena */
-  @keyframes runAway{
-    0%   { left: 55%; top:  10%; }
-    12%  { left: 10%; top:  30%; }
-    24%  { left: 75%; top:  15%; }
-    36%  { left: 20%; top:  70%; }
-    48%  { left: 85%; top:  55%; }
-    60%  { left: 35%; top:  80%; }
-    72%  { left: 70%; top:  75%; }
-    84%  { left: 15%; top:  55%; }
-    100% { left: 55%; top:  10%; }
   }
 
   .shy{
@@ -135,12 +113,11 @@
 
 <body>
 
-<!-- Anchor target for the YES screen -->
+<!-- Target for the YES screen -->
 <a id="yes"></a>
 
-<div class="card">
+<div class="card" id="card">
   <div class="catWrap" aria-hidden="true">
-    <!-- Cute cat icon (original, similar vibe) -->
     <svg class="catSvg" viewBox="0 0 120 120">
       <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
@@ -162,12 +139,9 @@
   <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
-    <div class="buttons">
-      <!-- Yes goes to #yes which reveals the yes screen -->
+    <div class="buttons" id="arena">
       <a class="btn yes" href="#yes">Yes</a>
-
-      <!-- No runs away on hover/press -->
-      <a class="btn no" href="javascript:void(0)">No</a>
+      <a class="btn no" id="noBtn" href="javascript:void(0)">No</a>
     </div>
 
     <div class="shy">"No" seems a bit shy 😈</div>
@@ -179,8 +153,103 @@
     <div class="yay">YAY!!! 🎉</div>
     <img alt="celebration gif" src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" />
   </div>
-
 </div>
+
+<script>
+(function(){
+  var arena = document.getElementById("arena");
+  var noBtn = document.getElementById("noBtn");
+  if(!arena || !noBtn) return;
+
+  // Place the No button somewhere valid initially
+  function placeNo(x, y){
+    var maxX = arena.clientWidth - noBtn.offsetWidth;
+    var maxY = arena.clientHeight - noBtn.offsetHeight;
+
+    var nx = Math.max(0, Math.min(maxX, x));
+    var ny = Math.max(0, Math.min(maxY, y));
+
+    noBtn.style.left = nx + "px";
+    noBtn.style.top  = ny + "px";
+  }
+
+  // Convert a pointer position to arena-local coordinates
+  function getLocalPos(clientX, clientY){
+    var r = arena.getBoundingClientRect();
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+
+  // Distance from pointer to center of the No button
+  function distToNo(px, py){
+    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
+    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
+    var dx = px - bx;
+    var dy = py - by;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  // “Run away” settings (tweakable)
+  var triggerRadius = 90;   // how close before it runs (px)
+  var fleeDistance  = 140;  // how far it jumps away (px)
+
+  // Initialize No position to a nice spot
+  placeNo(arena.clientWidth*0.62, 70);
+
+  function fleeFrom(px, py){
+    // direction away from pointer
+    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
+    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
+
+    var dx = bx - px;
+    var dy = by - py;
+
+    // avoid zero vector
+    if(dx === 0 && dy === 0){ dx = 1; dy = 1; }
+
+    var len = Math.sqrt(dx*dx + dy*dy);
+    dx /= len; dy /= len;
+
+    // move away + a little randomness
+    var jitter = (Math.random()*40 - 20);
+    var newX = (noBtn.offsetLeft + dx * fleeDistance) + jitter;
+    var newY = (noBtn.offsetTop  + dy * fleeDistance) + jitter;
+
+    placeNo(newX, newY);
+
+    // tiny “fear” shrink while fleeing
+    noBtn.style.transform = "scale(0.85)";
+    setTimeout(function(){ noBtn.style.transform = ""; }, 120);
+  }
+
+  // Desktop: mouse moves
+  arena.addEventListener("mousemove", function(e){
+    var p = getLocalPos(e.clientX, e.clientY);
+    if(distToNo(p.x, p.y) < triggerRadius){
+      fleeFrom(p.x, p.y);
+    }
+  });
+
+  // Mobile: finger moves
+  arena.addEventListener("touchmove", function(e){
+    if(!e.touches || !e.touches[0]) return;
+    var t = e.touches[0];
+    var p = getLocalPos(t.clientX, t.clientY);
+    if(distToNo(p.x, p.y) < triggerRadius){
+      fleeFrom(p.x, p.y);
+    }
+  }, {passive:true});
+
+  // Also flee if they tap near it (mobile)
+  arena.addEventListener("touchstart", function(e){
+    if(!e.touches || !e.touches[0]) return;
+    var t = e.touches[0];
+    var p = getLocalPos(t.clientX, t.clientY);
+    if(distToNo(p.x, p.y) < triggerRadius + 30){
+      fleeFrom(p.x, p.y);
+    }
+  }, {passive:true});
+})();
+</script>
 
 </body>
 </html>
