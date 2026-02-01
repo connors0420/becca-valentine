@@ -26,9 +26,8 @@
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
 
-  /* Mobile sizing */
   @media (max-width: 520px){
-    .card{ padding:34px 20px; width:92vw; }
+    .card{ padding:34px 18px; width:92vw; }
   }
 
   .catWrap{ display:flex; justify-content:center; margin-bottom:10px; }
@@ -37,15 +36,16 @@
     .catSvg{ width:78px; height:78px; }
   }
 
-  /* IMPORTANT: allow wrapping on mobile */
+  /* FORCE WRAPPING ON MOBILE */
   h1{
     margin: 14px 0 10px;
     font-weight: 800;
-    font-size: clamp(24px, 6vw, 36px);
+    font-size: clamp(24px, 7vw, 36px);
     line-height: 1.15;
-    white-space: normal;     /* <-- wrap */
-    overflow: visible;       /* <-- no clipping */
-    text-overflow: unset;    /* <-- no ellipsis */
+    white-space: normal;      /* wrap */
+    overflow: visible;        /* no clipping */
+    text-overflow: unset;     /* no ellipsis */
+    word-break: normal;
   }
 
   /* YES screen via :target (no JS needed) */
@@ -88,15 +88,15 @@
     transform: translateX(-165%) scale(1.2);
   }
 
-  /* NO button: smooth “dodge” transition */
+  /* NO is positioned entirely by JS so it can NEVER leave the arena */
   .no{
     background:#ddd;
     color:#111;
-    left:50%;
-    top: 140px;
+    left:0;
+    top:0;
     will-change: transform;
-    transform: translate3d(120px, 0px, 0);
-    transition: transform 160ms ease-out; /* smooth movement */
+    transform: translate3d(0px, 0px, 0);
+    transition: transform 160ms ease-out; /* smooth dodge */
   }
 
   .shy{
@@ -132,7 +132,7 @@
 
 <div class="card">
   <div class="catWrap" aria-hidden="true">
-    <!-- Cat icon (same one you liked) -->
+    <!-- Cat icon -->
     <svg class="catSvg" viewBox="0 0 120 120">
       <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
@@ -176,107 +176,98 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // Viral-ish tuning:
-  var triggerRadius = 90;   // how close before it dodges (desktop)
-  var jumpMin = 110;        // min dodge distance
-  var jumpMax = 170;        // max dodge distance
+  // Viral-ish tuning
+  var triggerRadius = 95;   // desktop: how close before it dodges
+  var jumpMin = 120;
+  var jumpMax = 170;
   var pad = 12;
 
-  // Current translate offsets
-  var tx = 120, ty = 0;
-
-  function setNoTransform(){
-    noBtn.style.transform = "translate3d(" + tx + "px," + ty + "px,0)";
-  }
-  setNoTransform();
-
-  function arenaLocal(clientX, clientY){
-    var r = arena.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
-  }
-
-  function btnCenter(){
-    var br = noBtn.getBoundingClientRect();
-    var ar = arena.getBoundingClientRect();
-    return {
-      x: (br.left - ar.left) + br.width/2,
-      y: (br.top  - ar.top)  + br.height/2,
-      w: br.width,
-      h: br.height
-    };
-  }
+  // Current NO position inside arena (top-left of button)
+  var x = 0, y = 0;
 
   function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
 
-  function dodgeFrom(px, py){
-    var c = btnCenter();
-    var dx = c.x - px;
-    var dy = c.y - py;
+  function bounds(){
+    return {
+      maxX: arena.clientWidth  - noBtn.offsetWidth  - pad,
+      maxY: arena.clientHeight - noBtn.offsetHeight - pad
+    };
+  }
+
+  function place(nx, ny){
+    var b = bounds();
+    x = clamp(nx, pad, b.maxX);
+    y = clamp(ny, pad, b.maxY);
+    noBtn.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+  }
+
+  // start position (right side like the video)
+  place(arena.clientWidth * 0.62, 140);
+
+  function arenaLocal(clientX, clientY){
+    var r = arena.getBoundingClientRect();
+    return { px: clientX - r.left, py: clientY - r.top };
+  }
+
+  function center(){
+    return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
+  }
+
+  function dodgeFrom(px, py, forceDodge){
+    var c = center();
+    var dx = c.cx - px;
+    var dy = c.cy - py;
     var d = Math.sqrt(dx*dx + dy*dy);
 
-    // only dodge when close (prevents “freaking out”)
-    if(d > triggerRadius) return;
+    if(!forceDodge && d > triggerRadius) return;
 
     if(d < 0.001){ dx = 1; dy = 1; d = 1; }
     dx /= d; dy /= d;
 
-    // randomize angle slightly so it feels natural
-    var angle = (Math.random() * 0.9 - 0.45);
-    var jx = dx * Math.cos(angle) - dy * Math.sin(angle);
-    var jy = dx * Math.sin(angle) + dy * Math.cos(angle);
+    // small random angle jitter to feel natural
+    var ang = (Math.random() * 0.9 - 0.45);
+    var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
+    var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
 
     var jump = jumpMin + Math.random() * (jumpMax - jumpMin);
 
-    // propose new translation
-    var ntx = tx + jx * jump;
-    var nty = ty + jy * jump;
+    var nx = x + jx * jump;
+    var ny = y + jy * jump;
 
-    // keep inside arena using current real rect
-    var ar = arena.getBoundingClientRect();
-    var br = noBtn.getBoundingClientRect();
+    // If near edges, push inward a bit so it doesn't disappear
+    var b = bounds();
+    var edge = 18;
 
-    var curLeft = br.left - ar.left;
-    var curTop  = br.top  - ar.top;
+    if(nx < edge) nx += 110;
+    if(nx > b.maxX - edge) nx -= 110;
+    if(ny < edge) ny += 80;
+    if(ny > b.maxY - edge) ny -= 80;
 
-    var maxLeft = arena.clientWidth - c.w - pad;
-    var maxTop  = arena.clientHeight - c.h - pad;
-
-    // convert translation into predicted top-left movement
-    var predLeft = curLeft + (ntx - tx);
-    var predTop  = curTop  + (nty - ty);
-
-    // clamp predicted position, then adjust translation accordingly
-    var clampedLeft = clamp(predLeft, pad, maxLeft);
-    var clampedTop  = clamp(predTop,  pad, maxTop);
-
-    tx += (clampedLeft - curLeft);
-    ty += (clampedTop - curTop);
-
-    setNoTransform();
+    place(nx, ny);
   }
 
-  // Desktop: move away when cursor gets close
+  // Desktop: dodge when cursor gets close
   arena.addEventListener("mousemove", function(e){
     var p = arenaLocal(e.clientX, e.clientY);
-    dodgeFrom(p.x, p.y);
+    dodgeFrom(p.px, p.py, false);
   });
 
-  // Mobile: dodge only when you try to tap it
+  // Mobile: dodge only when you try to tap the NO button (viral feel)
   noBtn.addEventListener("touchstart", function(e){
-    // treat the touch point as the “threat”
     var t = e.touches && e.touches[0];
     if(!t) return;
     var p = arenaLocal(t.clientX, t.clientY);
-    // force dodge regardless of radius on mobile tap attempt
-    var saved = triggerRadius;
-    triggerRadius = 9999;
-    dodgeFrom(p.x, p.y);
-    triggerRadius = saved;
+    dodgeFrom(p.px, p.py, true); // force dodge on tap attempt
   }, {passive:true});
 
-  // Prevent clicking No doing anything
+  // Prevent “No” doing anything
   noBtn.addEventListener("click", function(e){
     e.preventDefault();
+  });
+
+  // Re-clamp on resize/orientation changes
+  window.addEventListener("resize", function(){
+    place(x, y);
   });
 })();
 </script>
