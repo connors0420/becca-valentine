@@ -21,7 +21,7 @@
     background:#fff;
     padding:44px 64px;
     border-radius:22px;
-    width:min(680px, 92vw);
+    width:min(700px, 92vw);
     text-align:center;
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
@@ -38,40 +38,72 @@
     text-overflow: ellipsis;
   }
 
+  /* Two screens controlled by :target */
+  .screen { display:block; }
+  #yes:target ~ .card #questionScreen { display:none; }
+  #yes:target ~ .card #yesScreen { display:block; }
+
+  #yesScreen{ display:none; }
+
   .buttons{
     margin-top: 26px;
     position: relative;
-    height: 210px;
+    height: 220px;     /* big playground */
     width: 100%;
   }
 
-  button{
+  .btn{
+    display:inline-block;
     padding: 14px 34px;
     font-size: 18px;
     border-radius: 12px;
     border: none;
     cursor: pointer;
     position: absolute;
+    text-decoration:none;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
   }
 
-  #yes{
+  /* YES button */
+  .yes{
     background:#ff4d6d;
     color:#fff;
     left:50%;
-    transform: translateX(-160%);
+    transform: translateX(-165%);
     transition: transform 0.18s ease;
   }
-  #yes:hover{
-    transform: translateX(-160%) scale(1.25);
+  .yes:hover{
+    transform: translateX(-165%) scale(1.25);
   }
 
-  #no{
+  /* NO button (CSS-only “runs away”) */
+  .no{
     background:#ddd;
+    color:#111;
     left:50%;
     transform: translateX(35%);
-    transition: transform 0.10s ease;
+    transform-origin:center;
+  }
+
+  /* On hover (desktop) OR press (mobile), it panics */
+  .no:hover,
+  .no:active{
+    animation: runAway 0.9s linear infinite;
+    transform: translateX(35%) scale(0.78) rotate(-6deg);
+  }
+
+  /* Chaotic path inside the arena */
+  @keyframes runAway{
+    0%   { left: 55%; top:  10%; }
+    12%  { left: 10%; top:  30%; }
+    24%  { left: 75%; top:  15%; }
+    36%  { left: 20%; top:  70%; }
+    48%  { left: 85%; top:  55%; }
+    60%  { left: 35%; top:  80%; }
+    72%  { left: 70%; top:  75%; }
+    84%  { left: 15%; top:  55%; }
+    100% { left: 55%; top:  10%; }
   }
 
   .shy{
@@ -80,8 +112,6 @@
     color: #666;
   }
 
-  /* Yes screen */
-  #yesScreen{ display:none; }
   .yay{
     margin: 10px 0 0;
     font-size: 34px;
@@ -94,32 +124,21 @@
     70%{ transform: scale(0.95); }
     100%{ transform: scale(1); }
   }
+
   img{
     max-width:100%;
     border-radius:14px;
     margin-top:22px;
-  }
-
-  /* Confetti */
-  .confetti{
-    position: fixed;
-    top: -10px;
-    width: 10px;
-    height: 14px;
-    border-radius: 2px;
-    opacity: 0.95;
-    animation: fall linear forwards;
-    pointer-events:none;
-  }
-  @keyframes fall{
-    to{ transform: translateY(110vh) rotate(720deg); }
   }
 </style>
 </head>
 
 <body>
 
-<div class="card" id="card">
+<!-- Anchor target for the YES screen -->
+<a id="yes"></a>
+
+<div class="card">
   <div class="catWrap" aria-hidden="true">
     <!-- Cute cat icon (original, similar vibe) -->
     <svg class="catSvg" viewBox="0 0 120 120">
@@ -140,98 +159,28 @@
   </div>
 
   <!-- QUESTION SCREEN -->
-  <div id="questionScreen">
+  <div id="questionScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
 
-    <div class="buttons" id="arena">
-      <button id="yes" onclick="yesClick()">Yes</button>
-      <button id="no" onmouseover="moveNo()" ontouchstart="moveNo(); return false;">No</button>
+    <div class="buttons">
+      <!-- Yes goes to #yes which reveals the yes screen -->
+      <a class="btn yes" href="#yes">Yes</a>
+
+      <!-- No runs away on hover/press -->
+      <a class="btn no" href="javascript:void(0)">No</a>
     </div>
 
     <div class="shy">"No" seems a bit shy 😈</div>
   </div>
 
   <!-- YES SCREEN -->
-  <div id="yesScreen">
+  <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
     <img alt="celebration gif" src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" />
   </div>
+
 </div>
-
-<script>
-  // Make sure these are GLOBAL so inline handlers always find them
-  (function () {
-    var noRuns = 0;
-
-    function clamp(n, min, max) {
-      return Math.max(min, Math.min(max, n));
-    }
-
-    window.moveNo = function () {
-      var noBtn = document.getElementById("no");
-      var arena = document.getElementById("arena");
-      if (!noBtn || !arena) return;
-
-      noRuns += 1;
-
-      var maxX = arena.clientWidth - noBtn.offsetWidth;
-      var maxY = arena.clientHeight - noBtn.offsetHeight;
-
-      // farther each time (up to ~2.2x)
-      var jumpBoost = clamp(1 + noRuns * 0.12, 1, 2.2);
-
-      var x = Math.random() * maxX * jumpBoost;
-      var y = Math.random() * maxY * jumpBoost;
-
-      x = clamp(x, 0, maxX);
-      y = clamp(y, 0, maxY);
-
-      noBtn.style.left = x + "px";
-      noBtn.style.top  = y + "px";
-
-      // shrink in fear (down to 70%)
-      var shrink = clamp(1 - noRuns * 0.03, 0.70, 1);
-      var wobble = (Math.random() * 12 - 6);
-      noBtn.style.transform = "scale(" + shrink + ") rotate(" + wobble + "deg)";
-    };
-
-    function confettiBurst(count) {
-      for (var i = 0; i < count; i++) {
-        var c = document.createElement("div");
-        c.className = "confetti";
-
-        var colors = ["#ff4d6d","#ffd166","#06d6a0","#4dabf7","#b197fc","#ff8fab"];
-        c.style.background = colors[Math.floor(Math.random() * colors.length)];
-        c.style.left = (Math.random() * 100) + "vw";
-
-        var dur = (Math.random() * 1.2 + 1.4);
-        c.style.animationDuration = dur.toFixed(2) + "s";
-        c.style.animationDelay = (Math.random() * 0.25).toFixed(2) + "s";
-
-        var w = Math.random() * 6 + 6;
-        var h = Math.random() * 10 + 10;
-        c.style.width = w + "px";
-        c.style.height = h + "px";
-
-        document.body.appendChild(c);
-
-        (function(node, ms){
-          setTimeout(function(){ if (node && node.remove) node.remove(); }, ms);
-        })(c, (dur + 0.6) * 1000);
-      }
-    }
-
-    window.yesClick = function () {
-      confettiBurst(90);
-
-      var q = document.getElementById("questionScreen");
-      var y = document.getElementById("yesScreen");
-      if (q) q.style.display = "none";
-      if (y) y.style.display = "block";
-    };
-  })();
-</script>
 
 </body>
 </html>
