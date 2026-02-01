@@ -68,16 +68,21 @@
     left:50%;
     top:110px;
     transform: translateX(-165%);
-    z-index: 2;
+    z-index: 3;
   }
 
-  /* NO: do NOT set a big default transform here.
-     JS will place it safely after load. */
+  /* ✅ IMPORTANT:
+     Default "No" is placed safely ON SCREEN using right/top,
+     so even if JS fails, it’s still visible + clickable. */
   .no{
     background:#ddd;
     color:#111;
-    z-index: 1;
-    transform: translate(0px, 0px);
+    top:110px;
+    right: 28px;   /* safe default */
+    left: auto;
+    z-index: 2;
+
+    /* JS will switch it to transform-based positioning */
     transition: transform 160ms ease-out;
     will-change: transform;
   }
@@ -137,8 +142,6 @@
   <div id="yesScreen" class="screen">
     <h1>Becca, will you be my Valentine?</h1>
     <div class="yay">YAY!!! 🎉</div>
-
-    <!-- LOCAL GIF -->
     <img alt="Kip says yes" src="kip.gif" />
   </div>
 </div>
@@ -149,26 +152,36 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
+  // Viral-ish tuning
   var pad = 12;
   var triggerRadius = 90;
   var jumpMin = 120;
   var jumpMax = 170;
 
-  var x = 0;
-  var y = 0;
+  // Position inside arena (top-left coordinates)
+  var x = 0, y = 0;
 
-  function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+  function applyTransform(){
+    noBtn.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
+  }
 
   function place(nx, ny){
-    var maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+    var maxX = arena.clientWidth - noBtn.offsetWidth - pad;
     var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
     x = clamp(nx, pad, maxX);
     y = clamp(ny, pad, maxY);
-    noBtn.style.transform = "translate(" + x + "px," + y + "px)";
+    applyTransform();
   }
 
   function center(){
     return { cx: x + noBtn.offsetWidth/2, cy: y + noBtn.offsetHeight/2 };
+  }
+
+  function arenaLocal(clientX, clientY){
+    var r = arena.getBoundingClientRect();
+    return { px: clientX - r.left, py: clientY - r.top };
   }
 
   function dodgeFrom(px, py){
@@ -181,6 +194,7 @@
     if(d < 1){ dx = 1; dy = 1; d = 1; }
     dx /= d; dy /= d;
 
+    // small random angle jitter for “viral” feel
     var ang = (Math.random() * 0.9 - 0.45);
     var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
     var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
@@ -189,21 +203,18 @@
     place(x + jx * jump, y + jy * jump);
   }
 
-  function arenaLocal(clientX, clientY){
-    var r = arena.getBoundingClientRect();
-    return { px: clientX - r.left, py: clientY - r.top };
+  // ✅ JS takeover:
+  // switch from right-positioned fallback to transform positioning
+  function init(){
+    noBtn.style.left = "0px";
+    noBtn.style.right = "auto";
+
+    // start safely inside arena, near right side
+    place(arena.clientWidth * 0.62, 110);
   }
 
-  // ✅ SAFE INITIAL POSITION (always visible)
-  // Put it a little to the right of center, aligned with the YES row.
-  function initPosition(){
-    var safeX = arena.clientWidth * 0.62;
-    var safeY = 110;
-    place(safeX, safeY);
-  }
-
-  // Delay 1 tick so sizes are measured correctly on iOS
-  requestAnimationFrame(initPosition);
+  // Wait a tick so iOS has correct sizes
+  requestAnimationFrame(init);
 
   arena.addEventListener("mousemove", function(e){
     var p = arenaLocal(e.clientX, e.clientY);
@@ -217,7 +228,7 @@
     var t = e.touches[0];
     var p = arenaLocal(t.clientX, t.clientY);
 
-    // Force dodge on tap attempt
+    // force dodge on tap attempt
     var saved = triggerRadius;
     triggerRadius = 9999;
     dodgeFrom(p.px, p.py);
@@ -230,7 +241,7 @@
   });
 
   window.addEventListener("resize", function(){
-    initPosition();
+    init();
   });
 })();
 </script>
