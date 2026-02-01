@@ -47,7 +47,7 @@
   .buttons{
     margin-top: 28px;
     position: relative;
-    height: 380px;     /* more space */
+    height: 380px;
     width: 100%;
   }
 
@@ -76,13 +76,12 @@
     transform: translateX(-165%) scale(1.25);
   }
 
-  /* NO: we only animate via transform translate3d for smoothness */
   .no{
     background:#ddd;
     color:#111;
     left:50%;
     top: 140px;
-    transform: translate3d(35%,0,0); /* initial offset like viral */
+    transform: translate3d(35%,0,0); /* initial offset */
     will-change: transform;
   }
 
@@ -160,47 +159,84 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // Smooth magnet settings (harder = bigger radius/force)
-  var repelRadius = 190;     // start running sooner
-  var maxSpeed    = 18;      // cap speed for smoothness
-  var force       = 1.25;    // how strongly it accelerates away
-  var friction    = 0.86;    // lower = more slippery, higher = more controlled
+  // Tuning
+  var repelRadius = 190;
+  var maxSpeed    = 18;
+  var force       = 1.25;
+  var friction    = 0.86;
+  var pad         = 10;
 
-  var pad = 10;
-  var x = 0, y = 0;          // translation offsets in px
+  var x = 0, y = 0;
   var vx = 0, vy = 0;
   var pointer = null;
 
-  // Compute arena bounds for the NO button base position
-  function bounds(){
-    var maxX = arena.clientWidth - noBtn.offsetWidth - pad;
-    var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
-    return { maxX:maxX, maxY:maxY };
-  }
-
-  // Start near center-right (like viral), in pixels relative to its default left/top
-  x = Math.min(220, arena.clientWidth * 0.25);
-  y = 0;
-
-  function setTransform(scale, rot){
-    scale = scale || 1;
-    rot = rot || 0;
-    noBtn.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) scale(" + scale.toFixed(2) + ") rotate(" + rot.toFixed(1) + "deg)";
-  }
-
-  // Map pointer to arena-local coords
   function localPos(cx, cy){
     var r = arena.getBoundingClientRect();
     return { px: cx - r.left, py: cy - r.top };
   }
 
+  function setTransform(scale, rot){
+    scale = scale || 1;
+    rot = rot || 0;
+    noBtn.style.transform =
+      "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) " +
+      "scale(" + scale.toFixed(2) + ") rotate(" + rot.toFixed(1) + "deg)";
+  }
+
+  // Start near center-right
+  x = Math.min(220, arena.clientWidth * 0.25);
+  y = 0;
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+  // Big random hop inward (used to unstick corners)
+  function randomHop(){
+    var ar = arena.getBoundingClientRect();
+    var br = noBtn.getBoundingClientRect();
+
+    var curLeft = br.left - ar.left;
+    var curTop  = br.top  - ar.top;
+
+    // pick a new target somewhere in the middle-ish area
+    var safeMinX = pad + arena.clientWidth * 0.15;
+    var safeMaxX = arena.clientWidth - pad - arena.clientWidth * 0.15;
+    var safeMinY = pad + arena.clientHeight * 0.15;
+    var safeMaxY = arena.clientHeight - pad - arena.clientHeight * 0.15;
+
+    var targetX = clamp(safeMinX + Math.random() * (safeMaxX - safeMinX), pad, arena.clientWidth - pad);
+    var targetY = clamp(safeMinY + Math.random() * (safeMaxY - safeMinY), pad, arena.clientHeight - pad);
+
+    // convert target button top-left into translation deltas
+    var dx = (targetX - curLeft);
+    var dy = (targetY - curTop);
+
+    // add to translation and give it velocity so it continues moving
+    x += dx;
+    y += dy;
+    vx += (Math.random()*10 - 5);
+    vy += (Math.random()*10 - 5);
+  }
+
+  // If near edges, hop inward automatically
+  function edgeRescue(){
+    var ar = arena.getBoundingClientRect();
+    var br = noBtn.getBoundingClientRect();
+
+    var left = br.left - ar.left;
+    var top  = br.top  - ar.top;
+    var right = (ar.right - br.right);
+    var bottom = (ar.bottom - br.bottom);
+
+    // “stuck zone” threshold
+    var edge = 18;
+
+    if(left < edge || top < edge || right < edge || bottom < edge){
+      randomHop();
+    }
+  }
+
   function tick(){
     if(pointer){
-      // Current button center in arena coords:
-      // Base position is at left:50% top:140px, but we care about its actual box:
-      var btnLeft = (arena.clientWidth * 0.5) + x; // approx since left:50%
-      // Better: compute actual position from offsets:
-      // We'll use getBoundingClientRect for accuracy:
       var br = noBtn.getBoundingClientRect();
       var ar = arena.getBoundingClientRect();
       var bx = (br.left - ar.left) + br.width/2;
@@ -214,7 +250,7 @@
         if(d < 0.001){ dx = 1; dy = 1; d = 1; }
         dx /= d; dy /= d;
 
-        var closeness = (repelRadius - d) / repelRadius; // 0..1
+        var closeness = (repelRadius - d) / repelRadius;
         var ax = dx * force * (6 + 14 * closeness);
         var ay = dy * force * (6 + 14 * closeness);
 
@@ -225,10 +261,6 @@
         vx += (Math.random()*2 - 1) * 0.18;
         vy += (Math.random()*2 - 1) * 0.18;
 
-        // fear look
-        var s = 1 - closeness * 0.20;
-        if(s < 0.84) s = 0.84;
-        var rot = (Math.random()*6 - 3);
         // cap speed
         var sp = Math.sqrt(vx*vx + vy*vy);
         if(sp > maxSpeed){
@@ -236,33 +268,30 @@
           vy = vy / sp * maxSpeed;
         }
 
-        // apply friction + move
+        // fear visuals
+        var s = 1 - closeness * 0.20;
+        if(s < 0.84) s = 0.84;
+        var rot = (Math.random()*6 - 3);
+
         vx *= friction;
         vy *= friction;
         x += vx;
         y += vy;
 
-        // clamp inside arena by using real rects + padding
-        var b = bounds();
-        // Instead of clamping x/y directly (hard), we’ll gently steer back if near edges:
-        var nr = noBtn.getBoundingClientRect();
-        var ar2 = arena.getBoundingClientRect();
-        var left = nr.left - ar2.left;
-        var top  = nr.top  - ar2.top;
-
-        if(left < pad){ x += (pad - left) * 0.35; vx *= 0.6; }
-        if(top  < pad){ y += (pad - top)  * 0.35; vy *= 0.6; }
-        if(left > b.maxX){ x -= (left - b.maxX) * 0.35; vx *= 0.6; }
-        if(top  > b.maxY){ y -= (top - b.maxY)  * 0.35; vy *= 0.6; }
-
         setTransform(s, rot);
+
+        // Rescue if it gets cornered
+        edgeRescue();
       } else {
-        // drift slows when pointer is far
+        // calm drift
         vx *= 0.88;
         vy *= 0.88;
         x += vx;
         y += vy;
         setTransform(1, 0);
+
+        // still rescue if it drifts into a corner
+        edgeRescue();
       }
     } else {
       setTransform(1, 0);
@@ -271,12 +300,12 @@
     requestAnimationFrame(tick);
   }
 
-  // Desktop pointer tracking
+  // Desktop
   arena.addEventListener("mousemove", function(e){
     pointer = localPos(e.clientX, e.clientY);
   });
 
-  // Mobile finger tracking
+  // Mobile
   arena.addEventListener("touchstart", function(e){
     if(e.touches && e.touches[0]){
       var t = e.touches[0];
@@ -291,11 +320,15 @@
     }
   }, {passive:true});
 
-  // If they try to tap the No button, shove it
+  // If they try to click/tap NO: hop randomly so it never feels stuck
+  noBtn.addEventListener("click", function(e){
+    e.preventDefault();
+    randomHop();
+  });
+
   noBtn.addEventListener("touchstart", function(e){
-    var br = noBtn.getBoundingClientRect();
-    var ar = arena.getBoundingClientRect();
-    pointer = { px: (br.left - ar.left) + br.width/2, py: (br.top - ar.top) + br.height/2 };
+    // also hop on touch (prevents corner-stall)
+    randomHop();
   }, {passive:true});
 
   requestAnimationFrame(tick);
