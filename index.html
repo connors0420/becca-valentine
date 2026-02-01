@@ -17,9 +17,9 @@
 
   .card {
     background: white;
-    padding: 40px;
-    border-radius: 20px;
-    width: 420px;
+    padding: 45px 60px;
+    border-radius: 22px;
+    width: 560px; /* wider = one-line text */
     text-align: center;
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
   }
@@ -30,16 +30,17 @@
 
   h1 {
     margin: 20px 0;
+    white-space: nowrap; /* force single line */
   }
 
   .buttons {
-    margin-top: 30px;
+    margin-top: 35px;
     position: relative;
-    height: 140px;
+    height: 180px; /* more space to run */
   }
 
   button {
-    padding: 14px 30px;
+    padding: 14px 32px;
     font-size: 18px;
     border-radius: 12px;
     border: none;
@@ -51,30 +52,30 @@
     background: #ff4d6d;
     color: white;
     left: 50%;
-    transform: translateX(-140%);
+    transform: translateX(-150%);
     transition: transform 0.2s ease;
   }
 
   #yes:hover {
-    transform: translateX(-140%) scale(1.25);
+    transform: translateX(-150%) scale(1.25);
   }
 
   #no {
     background: #ddd;
     left: 50%;
-    transform: translateX(20%);
+    transform: translateX(30%);
   }
 
   .shy {
-    margin-top: 60px;
+    margin-top: 70px;
     font-size: 14px;
     color: #666;
   }
 
   img {
     max-width: 100%;
-    border-radius: 12px;
-    margin-top: 20px;
+    border-radius: 14px;
+    margin-top: 25px;
   }
 </style>
 </head>
@@ -115,8 +116,8 @@
   function yesClick() {
     document.getElementById("card").innerHTML = `
       <div class="cat">🐱🎉</div>
-      <h1>YAY!!! 🎉</h1>
-      <p>You just made my day 💕</p>
+      <h1>Becca, will you be my Valentine?</h1>
+      <h2>YAY!!! 💖</h2>
       <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif">
     `;
   }
