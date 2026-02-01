@@ -19,9 +19,9 @@
 
   .card{
     background:#fff;
-    padding:44px 64px;
+    padding:48px 72px;
     border-radius:22px;
-    width:min(700px, 92vw);
+    width:min(860px, 94vw);      /* BIGGER card */
     text-align:center;
     box-shadow:0 15px 30px rgba(0,0,0,0.15);
   }
@@ -31,23 +31,23 @@
 
   h1{
     margin: 14px 0 10px;
-    font-size: 34px;
+    font-size: 36px;
     font-weight: 700;
-    white-space: nowrap;
+    white-space: nowrap;         /* keep in one line */
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: ellipsis;     /* safety for tiny screens */
   }
 
-  /* YES screen via :target (no JS required) */
+  /* YES screen controlled by :target (works without JS) */
   .screen { display:block; }
   #yes:target ~ .card #questionScreen { display:none; }
   #yes:target ~ .card #yesScreen { display:block; }
   #yesScreen{ display:none; }
 
   .buttons{
-    margin-top: 26px;
+    margin-top: 28px;
     position: relative;
-    height: 220px;
+    height: 360px;              /* BIGGER playground */
     width: 100%;
   }
 
@@ -62,26 +62,32 @@
     text-decoration:none;
     user-select:none;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.15s ease;
   }
 
   .yes{
     background:#ff4d6d;
     color:#fff;
     left:50%;
-    top: 70px;
+    top: 120px;
     transform: translateX(-165%);
+    transition: transform 0.18s ease;
   }
   .yes:hover{
     transform: translateX(-165%) scale(1.25);
   }
 
+  /* Smooth movement for magnet feel */
   .no{
     background:#ddd;
     color:#111;
     left:50%;
-    top: 70px;
+    top: 120px;
     transform: translateX(35%);
+    transition:
+      left 95ms ease-out,
+      top 95ms ease-out,
+      transform 120ms ease-out;
+    will-change: left, top, transform;
   }
 
   .shy{
@@ -113,11 +119,12 @@
 
 <body>
 
-<!-- Target for the YES screen -->
+<!-- Target for YES screen -->
 <a id="yes"></a>
 
 <div class="card" id="card">
   <div class="catWrap" aria-hidden="true">
+    <!-- Cute cat icon (original, similar vibe) -->
     <svg class="catSvg" viewBox="0 0 120 120">
       <circle cx="60" cy="64" r="40" fill="#F2B37B"></circle>
       <path d="M33 40 L44 22 L54 45 Z" fill="#E9A56F"></path>
@@ -161,93 +168,111 @@
   var noBtn = document.getElementById("noBtn");
   if(!arena || !noBtn) return;
 
-  // Place the No button somewhere valid initially
+  // “Harder” settings (magnet feel)
+  var repelRadius = 160;     // how close before it starts gliding away
+  var repelStrength = 18;    // bigger = moves faster per frame
+  var shrinkMin = 0.82;      // how scared it gets (smaller = more scared)
+  var pad = 10;              // keep inside arena edges
+  var vx = 0, vy = 0;        // velocity for smooth gliding
+  var lastPointer = null;
+
+  function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
   function placeNo(x, y){
-    var maxX = arena.clientWidth - noBtn.offsetWidth;
-    var maxY = arena.clientHeight - noBtn.offsetHeight;
-
-    var nx = Math.max(0, Math.min(maxX, x));
-    var ny = Math.max(0, Math.min(maxY, y));
-
-    noBtn.style.left = nx + "px";
-    noBtn.style.top  = ny + "px";
+    var maxX = arena.clientWidth - noBtn.offsetWidth - pad;
+    var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+    noBtn.style.left = clamp(x, pad, maxX) + "px";
+    noBtn.style.top  = clamp(y, pad, maxY) + "px";
   }
 
-  // Convert a pointer position to arena-local coordinates
-  function getLocalPos(clientX, clientY){
+  // Initial position (nice, like the viral one)
+  // Use absolute placement so JS has a real starting point
+  placeNo(arena.clientWidth * 0.62, 120);
+
+  function getPointerLocal(clientX, clientY){
     var r = arena.getBoundingClientRect();
     return { x: clientX - r.left, y: clientY - r.top };
   }
 
-  // Distance from pointer to center of the No button
-  function distToNo(px, py){
-    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
-    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
-    var dx = px - bx;
-    var dy = py - by;
-    return Math.sqrt(dx*dx + dy*dy);
-  }
-
-  // “Run away” settings (tweakable)
-  var triggerRadius = 90;   // how close before it runs (px)
-  var fleeDistance  = 140;  // how far it jumps away (px)
-
-  // Initialize No position to a nice spot
-  placeNo(arena.clientWidth*0.62, 70);
-
-  function fleeFrom(px, py){
-    // direction away from pointer
-    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
-    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
-
-    var dx = bx - px;
-    var dy = by - py;
-
-    // avoid zero vector
-    if(dx === 0 && dy === 0){ dx = 1; dy = 1; }
-
-    var len = Math.sqrt(dx*dx + dy*dy);
-    dx /= len; dy /= len;
-
-    // move away + a little randomness
-    var jitter = (Math.random()*40 - 20);
-    var newX = (noBtn.offsetLeft + dx * fleeDistance) + jitter;
-    var newY = (noBtn.offsetTop  + dy * fleeDistance) + jitter;
-
-    placeNo(newX, newY);
-
-    // tiny “fear” shrink while fleeing
-    noBtn.style.transform = "scale(0.85)";
-    setTimeout(function(){ noBtn.style.transform = ""; }, 120);
-  }
-
-  // Desktop: mouse moves
-  arena.addEventListener("mousemove", function(e){
-    var p = getLocalPos(e.clientX, e.clientY);
-    if(distToNo(p.x, p.y) < triggerRadius){
-      fleeFrom(p.x, p.y);
+  function tick(){
+    if(!lastPointer){
+      requestAnimationFrame(tick);
+      return;
     }
+
+    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
+    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
+
+    var dx = bx - lastPointer.x;
+    var dy = by - lastPointer.y;
+    var d = Math.sqrt(dx*dx + dy*dy);
+
+    // Only repel when pointer is close enough
+    if(d < repelRadius){
+      // Normalize away vector
+      if(d < 0.001){ dx = 1; dy = 1; d = 1; }
+      dx /= d; dy /= d;
+
+      // The closer you get, the stronger the push
+      var closeness = (repelRadius - d) / repelRadius; // 0..1
+      var push = repelStrength * (0.6 + 1.2 * closeness);
+
+      // Add push to velocity (smooth gliding)
+      vx += dx * push;
+      vy += dy * push;
+
+      // Add tiny random drift so it doesn't get trapped on edges
+      vx += (Math.random()*2 - 1) * 0.6;
+      vy += (Math.random()*2 - 1) * 0.6;
+
+      // “Shrink in fear” based on closeness
+      var s = clamp(1 - closeness * 0.22, shrinkMin, 1);
+      var wobble = (Math.random()*8 - 4);
+      noBtn.style.transform = "scale(" + s.toFixed(2) + ") rotate(" + wobble.toFixed(1) + "deg)";
+    } else {
+      // Calm down when far away
+      noBtn.style.transform = "";
+    }
+
+    // Apply friction so it doesn't accelerate forever
+    vx *= 0.78;
+    vy *= 0.78;
+
+    // Move
+    placeNo(noBtn.offsetLeft + vx, noBtn.offsetTop + vy);
+
+    requestAnimationFrame(tick);
+  }
+
+  // Desktop pointer
+  arena.addEventListener("mousemove", function(e){
+    lastPointer = getPointerLocal(e.clientX, e.clientY);
   });
 
-  // Mobile: finger moves
-  arena.addEventListener("touchmove", function(e){
-    if(!e.touches || !e.touches[0]) return;
-    var t = e.touches[0];
-    var p = getLocalPos(t.clientX, t.clientY);
-    if(distToNo(p.x, p.y) < triggerRadius){
-      fleeFrom(p.x, p.y);
+  // Mobile finger
+  arena.addEventListener("touchstart", function(e){
+    if(e.touches && e.touches[0]){
+      var t = e.touches[0];
+      lastPointer = getPointerLocal(t.clientX, t.clientY);
     }
   }, {passive:true});
 
-  // Also flee if they tap near it (mobile)
-  arena.addEventListener("touchstart", function(e){
-    if(!e.touches || !e.touches[0]) return;
-    var t = e.touches[0];
-    var p = getLocalPos(t.clientX, t.clientY);
-    if(distToNo(p.x, p.y) < triggerRadius + 30){
-      fleeFrom(p.x, p.y);
+  arena.addEventListener("touchmove", function(e){
+    if(e.touches && e.touches[0]){
+      var t = e.touches[0];
+      lastPointer = getPointerLocal(t.clientX, t.clientY);
     }
   }, {passive:true});
+
+  // If they try to tap the No button, treat it like a pointer got close
+  noBtn.addEventListener("touchstart", function(e){
+    // force a “near” pointer at the center of the button
+    var bx = noBtn.offsetLeft + noBtn.offsetWidth/2;
+    var by = noBtn.offsetTop  + noBtn.offsetHeight/2;
+    lastPointer = { x: bx, y: by };
+  }, {passive:true});
+
+  requestAnimationFrame(tick);
 })();
 </script>
 
