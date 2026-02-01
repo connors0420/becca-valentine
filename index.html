@@ -68,17 +68,20 @@
     left:50%;
     top:110px;
     transform: translateX(-165%);
-    z-index: 2;
+    z-index: 1;
   }
 
-  /* fallback placement for NO if JS fails */
+  /* Revert feel: NO floats freely and stays tappable */
   .no{
     background:#ddd;
     color:#111;
+
+    /* safe default if JS fails */
     top:110px;
-    right: 28px;
-    left: auto;
-    z-index: 1;
+    right:28px;
+    left:auto;
+
+    z-index: 5; /* NO above YES */
     transition: transform 160ms ease-out;
     will-change: transform;
   }
@@ -149,77 +152,23 @@
   var yesBtn = document.getElementById("yesBtn");
   if(!arena || !noBtn || !yesBtn) return;
 
-  // Tuning
+  // tuning
   var pad = 12;
   var triggerRadius = 90;
   var jumpMin = 120;
   var jumpMax = 170;
-  var safeMargin = 26; // "no-fly zone" padding around YES button
 
-  // transform positioning for NO
+  // JS takeover positioning using transforms
   var x = 0, y = 0;
 
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
-  function arenaRect(){
-    return arena.getBoundingClientRect();
-  }
-
-  function yesNoFlyZone(){
-    // YES button rect in arena coordinates + margin
-    var ar = arenaRect();
-    var yr = yesBtn.getBoundingClientRect();
-    var left = (yr.left - ar.left) - safeMargin;
-    var top  = (yr.top  - ar.top)  - safeMargin;
-    var right= (yr.right- ar.left) + safeMargin;
-    var bottom=(yr.bottom-ar.top)  + safeMargin;
-    return { left:left, top:top, right:right, bottom:bottom };
-  }
-
-  function maxBounds(){
-    return {
-      maxX: arena.clientWidth  - noBtn.offsetWidth  - pad,
-      maxY: arena.clientHeight - noBtn.offsetHeight - pad
-    };
-  }
-
-  function overlapsNoFly(nx, ny){
-    var z = yesNoFlyZone();
-    var l = nx, t = ny;
-    var r = nx + noBtn.offsetWidth;
-    var b = ny + noBtn.offsetHeight;
-    return !(r < z.left || l > z.right || b < z.top || t > z.bottom);
-  }
-
-  function applyTransform(){
-    noBtn.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
-  }
-
   function place(nx, ny){
-    var b = maxBounds();
-    nx = clamp(nx, pad, b.maxX);
-    ny = clamp(ny, pad, b.maxY);
-
-    // If it would overlap YES, try a few random alternative spots
-    if(overlapsNoFly(nx, ny)){
-      for(var i=0;i<18;i++){
-        var rx = pad + Math.random() * (b.maxX - pad);
-        var ry = pad + Math.random() * (b.maxY - pad);
-        if(!overlapsNoFly(rx, ry)){
-          nx = rx; ny = ry;
-          break;
-        }
-      }
-      // If still overlapping (rare), push it away horizontally
-      if(overlapsNoFly(nx, ny)){
-        var z = yesNoFlyZone();
-        if(nx < z.left) nx = pad;
-        else nx = b.maxX;
-      }
-    }
-
-    x = nx; y = ny;
-    applyTransform();
+    var maxX = arena.clientWidth  - noBtn.offsetWidth  - pad;
+    var maxY = arena.clientHeight - noBtn.offsetHeight - pad;
+    x = clamp(nx, pad, maxX);
+    y = clamp(ny, pad, maxY);
+    noBtn.style.transform = "translate(" + x + "px," + y + "px)";
   }
 
   function center(){
@@ -227,7 +176,7 @@
   }
 
   function arenaLocal(clientX, clientY){
-    var r = arenaRect();
+    var r = arena.getBoundingClientRect();
     return { px: clientX - r.left, py: clientY - r.top };
   }
 
@@ -241,6 +190,7 @@
     if(d < 1){ dx = 1; dy = 1; d = 1; }
     dx /= d; dy /= d;
 
+    // slight randomness like the original
     var ang = (Math.random() * 0.9 - 0.45);
     var jx = dx * Math.cos(ang) - dy * Math.sin(ang);
     var jy = dx * Math.sin(ang) + dy * Math.cos(ang);
@@ -249,12 +199,10 @@
     place(x + jx * jump, y + jy * jump);
   }
 
-  // JS takeover: use transform positioning instead of right/top fallback
+  // init: switch NO from right/top fallback to transform positioning
   function init(){
     noBtn.style.left = "0px";
     noBtn.style.right = "auto";
-
-    // start near right side, same row as YES, but not in the no-fly zone
     place(arena.clientWidth * 0.62, 110);
   }
 
@@ -266,18 +214,21 @@
   });
 
   noBtn.addEventListener("touchstart", function(e){
+    // prevent Safari link behavior + stop bubbling
     e.preventDefault();
     e.stopPropagation();
+
     var t = e.touches[0];
     var p = arenaLocal(t.clientX, t.clientY);
 
-    // Force dodge on tap attempt
+    // force a dodge on tap attempt
     var saved = triggerRadius;
     triggerRadius = 9999;
     dodgeFrom(p.px, p.py);
     triggerRadius = saved;
   }, {passive:false});
 
+  // ✅ THIS is the key: if you tap NO, it can never “press” YES.
   noBtn.addEventListener("click", function(e){
     e.preventDefault();
     e.stopPropagation();
